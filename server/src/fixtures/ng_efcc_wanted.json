@@ -1,0 +1,80 @@
+[
+ {
+  "external_id": "EFCC-2023-011",
+  "entity_type": "person",
+  "primary_name": "Chukwudi Emeka Nwosu",
+  "aliases": [
+   "Emeka Nwosu",
+   "CE Nwosu"
+  ],
+  "dobs": [
+   "1988-01-15"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [
+   "NG"
+  ],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Advance fee fraud"
+  ],
+  "remarks": "Wanted for internet fraud (fictional)",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "EFCC-2023-018",
+  "entity_type": "person",
+  "primary_name": "Tunde Bakare Olawale",
+  "aliases": [
+   "Tunde Olawale"
+  ],
+  "dobs": [
+   "1979-04-04"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Money laundering"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "EFCC-2024-003",
+  "entity_type": "person",
+  "primary_name": "Fortune Chidinma Okafor",
+  "aliases": [
+   "Fortune Okafor"
+  ],
+  "dobs": [
+   "1992"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Cybercrime"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ }
+]

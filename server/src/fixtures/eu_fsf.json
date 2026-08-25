@@ -1,0 +1,73 @@
+[
+ {
+  "external_id": "EU.1",
+  "entity_type": "person",
+  "primary_name": "Sergei Antonov Belyaev",
+  "aliases": [
+   "Sergey Belyaev"
+  ],
+  "dobs": [
+   "1971-10-10"
+  ],
+  "nationalities": [
+   "RU"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "RUS"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "EU.2",
+  "entity_type": "organisation",
+  "primary_name": "Nile Delta Defence Industries",
+  "aliases": [],
+  "dobs": [],
+  "nationalities": [],
+  "countries": [
+   "SY"
+  ],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "SYR"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "EU.3",
+  "entity_type": "person",
+  "primary_name": "Ahmed Ould Mohamed Lemine",
+  "aliases": [
+   "Ahmad Lemine"
+  ],
+  "dobs": [
+   "1969"
+  ],
+  "nationalities": [
+   "ML"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "MLI"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ }
+]

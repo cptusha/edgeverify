@@ -1,0 +1,20 @@
+import React, { useState } from 'react';
+import { api, fmt } from '../api.js';
+import { useFetch, Pill, Err, Empty, Kpi } from '../components/ui.jsx';
+
+export default function Lists() {
+  const [f, setF] = useState({ q: '', type: '', region: '', enabled: '' }); const { data, error, reload } = useFetch('/lists/sources', f, [f.type, f.region, f.enabled]); const sum = useFetch('/lists/sources/summary'); const [msg, setMsg] = useState(null); const [busy, setBusy] = useState(null);
+  const rows = (data || []).filter(s => !f.q || s.name.toLowerCase().includes(f.q.toLowerCase()));
+  const toggle = async (s) => { await api(`/lists/sources/${s.code}`, { method: 'PATCH', body: { enabled: !s.enabled } }); reload(); sum.reload(); };
+  const sync = async (s) => { setBusy(s.code); const r = await api(`/lists/sources/${s.code}/sync`, { method: 'POST' }); setMsg(`${s.name}: ${r.status}${r.entries !== undefined ? ` — ${r.entries} entries` : r.reason ? ` — ${r.reason}` : r.error ? ` — ${r.error}` : ''}`); setBusy(null); reload(); sum.reload(); };
+  return <>
+    <div className="page-head"><div><h1>List registry</h1><p>Every source EdgeVerify can screen against. Enable what your jurisdiction and risk appetite require; add local lists with a CSV/JSON feed.</p></div></div>
+    {sum.data && <div className="grid g4" style={{ marginBottom: 14 }}><Kpi v={fmt.n(sum.data.total_sources)} l="Sources catalogued" /><Kpi v={fmt.n(sum.data.enabled_sources)} l="Enabled for screening" /><Kpi v={fmt.n(sum.data.total_entries)} l="Listed profiles loaded" /><Kpi v={sum.data.by_type.find(t => t.list_type === 'Sanction')?.n || 0} l="Sanctions programmes" sub={<span className="muted">{sum.data.by_type.map(t => `${t.n} ${t.list_type.toLowerCase()}`).join(' · ')}</span>} /></div>}
+    {msg && <div className="notice">{msg}</div>}
+    <div className="card"><div className="toolbar"><div><label>Name</label><input value={f.q} onChange={e => setF({ ...f, q: e.target.value })} placeholder="Filter" /></div><div><label>Type</label><select value={f.type} onChange={e => setF({ ...f, type: e.target.value })}><option value="">All</option>{['Sanction', 'PEP', 'Watchlist', 'Wanted'].map(x => <option key={x}>{x}</option>)}</select></div>
+      <div><label>Region</label><select value={f.region} onChange={e => setF({ ...f, region: e.target.value })}><option value="">All</option>{['International', 'Africa', 'Asia & Pacific', 'Europe', 'Middle East', 'North America', 'South/Latin America'].map(x => <option key={x}>{x}</option>)}</select></div>
+      <div><label>State</label><select value={f.enabled} onChange={e => setF({ ...f, enabled: e.target.value })}><option value="">All</option><option value="true">Enabled</option><option value="false">Disabled</option></select></div><span className="small muted" style={{ alignSelf: 'center' }}>{rows.length} sources</span></div><Err e={error} />
+      {rows.length ? <table><thead><tr><th>Source</th><th>Type</th><th>Country</th><th>Region</th><th>Tier</th><th>Adapter</th><th>Entries</th><th>Last sync</th><th></th></tr></thead><tbody>{rows.slice(0, 400).map(s => <tr key={s.code}><td><b>{s.name}</b><div className="small muted mono">{s.code}</div></td><td><Pill v={s.list_type} /></td><td className="small">{s.country}</td><td className="small">{s.region}</td><td className="mono">{s.tier}</td><td className="mono small">{s.adapter}</td><td className="mono">{s.entry_count || 0}</td><td className="small muted">{s.last_synced_at ? fmt.ago(s.last_synced_at) : '—'}{s.last_status && !/^ok/.test(s.last_status) && <div style={{ color: 'var(--high)' }}>{s.last_status}</div>}</td><td style={{ whiteSpace: 'nowrap' }}><button className={s.enabled ? 'teal' : ''} onClick={() => toggle(s)}>{s.enabled ? 'On' : 'Off'}</button> <button disabled={busy === s.code} onClick={() => sync(s)}>{busy === s.code ? '…' : 'Sync'}</button></td></tr>)}</tbody></table> : <Empty>No sources match.</Empty>}
+      {rows.length > 400 && <p className="small muted">Showing first 400 — narrow the filters.</p>}</div>
+  </>;
+}

@@ -1,0 +1,202 @@
+[
+ {
+  "external_id": "PEP-NG-001",
+  "entity_type": "person",
+  "primary_name": "Oluwaseun Adebayo Falana",
+  "aliases": [
+   "Seun Falana"
+  ],
+  "dobs": [
+   "1963-02-14"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "PEP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "1",
+  "pep_role": "Federal Minister (fictional)",
+  "rca_of": null
+ },
+ {
+  "external_id": "PEP-NG-002",
+  "entity_type": "person",
+  "primary_name": "Ngozi Chiamaka Falana",
+  "aliases": [
+   "Ngozi Falana"
+  ],
+  "dobs": [
+   "1966-06-30"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "RCA"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "1",
+  "pep_role": "Spouse of PEP-NG-001",
+  "rca_of": "PEP-NG-001"
+ },
+ {
+  "external_id": "PEP-NG-003",
+  "entity_type": "person",
+  "primary_name": "Abubakar Sadiq Musa",
+  "aliases": [
+   "A. S. Musa"
+  ],
+  "dobs": [
+   "1958"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "PEP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "2",
+  "pep_role": "State Governor (fictional)",
+  "rca_of": null
+ },
+ {
+  "external_id": "PEP-GH-001",
+  "entity_type": "person",
+  "primary_name": "Kwame Mensah Boateng",
+  "aliases": [
+   "Kwame Boateng"
+  ],
+  "dobs": [
+   "1970-09-01"
+  ],
+  "nationalities": [
+   "GH"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "PEP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "2",
+  "pep_role": "Member of Parliament (fictional)",
+  "rca_of": null
+ },
+ {
+  "external_id": "PEP-KE-001",
+  "entity_type": "person",
+  "primary_name": "Wanjiru Njeri Kamau",
+  "aliases": [
+   "Njeri Kamau"
+  ],
+  "dobs": [
+   "1975-12-25"
+  ],
+  "nationalities": [
+   "KE"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "PEP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "3",
+  "pep_role": "State-owned enterprise CEO (fictional)",
+  "rca_of": null
+ },
+ {
+  "external_id": "PEP-GB-001",
+  "entity_type": "person",
+  "primary_name": "Charlotte Amelia Whitmore",
+  "aliases": [
+   "Charlotte Whitmore"
+  ],
+  "dobs": [
+   "1968-04-18"
+  ],
+  "nationalities": [
+   "GB"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "PEP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "1",
+  "pep_role": "Senior civil servant (fictional)",
+  "rca_of": null
+ },
+ {
+  "external_id": "PEP-AE-001",
+  "entity_type": "person",
+  "primary_name": "Khalid Bin Rashid Al Nuaimi",
+  "aliases": [
+   "Khalid Al Nuaimi"
+  ],
+  "dobs": [
+   "1972"
+  ],
+  "nationalities": [
+   "AE"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "PEP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": "1",
+  "pep_role": "Ministerial adviser (fictional)",
+  "rca_of": null
+ },
+ {
+  "external_id": "SIP-001",
+  "entity_type": "person",
+  "primary_name": "Marcus Delacroix Vane",
+  "aliases": [
+   "Marcus Vane"
+  ],
+  "dobs": [
+   "1980-10-10"
+  ],
+  "nationalities": [
+   "FR"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "SIP"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": "Special interest person: under investigation (fictional)",
+  "rca_of": null
+ }
+]

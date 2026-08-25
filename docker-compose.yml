@@ -1,0 +1,11 @@
+services:
+  edgeverify:
+    build: .
+    ports: ["4000:4000"]
+    environment:
+      - JWT_SECRET=change-me-in-production
+      - LIST_FETCH_ENABLED=false
+      # - DATABASE_URL=postgres://user:pass@host:5432/edgeverify   # hosted / multi-tenant mode
+    volumes: ["ev-data:/app/server/data"]
+volumes:
+  ev-data:

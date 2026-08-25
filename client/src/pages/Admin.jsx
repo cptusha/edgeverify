@@ -1,0 +1,22 @@
+import React, { useState } from 'react';
+import { api, fmt } from '../api.js';
+import { useFetch, Err, Empty, Pill } from '../components/ui.jsx';
+export default function Admin() {
+  const users = useFetch('/admin/users'); const keys = useFetch('/admin/api-keys'); const roles = useFetch('/auth/roles'); const tenant = useFetch('/admin/tenant'); const hooks = useFetch('/admin/webhooks');
+  const [u, setU] = useState({ email: '', name: '', role: 'analyst', password: '' }); const [k, setK] = useState(null); const [err, setErr] = useState(null); const [hook, setHook] = useState('');
+  const addUser = async (e) => { e.preventDefault(); setErr(null); try { await api('/admin/users', { method: 'POST', body: u }); setU({ email: '', name: '', role: 'analyst', password: '' }); users.reload(); } catch (x) { setErr(x); } };
+  const addKey = async () => { setK(await api('/admin/api-keys', { method: 'POST', body: { label: 'Core banking integration' } })); keys.reload(); };
+  const addHook = async () => { await api('/admin/webhooks', { method: 'POST', body: { url: hook, events: ['alert.created'] } }); setHook(''); hooks.reload(); };
+  return <>
+    <div className="page-head"><div><h1>Users, roles & integrations</h1><p>{tenant.data?.name} · jurisdiction {tenant.data?.settings?.jurisdiction} · core banking: {tenant.data?.settings?.core_banking}</p></div></div>
+    <div className="grid g2">
+      <div className="card"><h2>Users</h2><Err e={users.error} />{users.data?.length ? <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th></tr></thead><tbody>{users.data.map(x => <tr key={x.id}><td>{x.name}</td><td className="small">{x.email}</td><td><Pill v="info">{x.role.replace(/_/g, ' ')}</Pill></td><td>{x.active ? 'yes' : 'no'}</td></tr>)}</tbody></table> : <Empty>No users.</Empty>}
+        <form className="form" onSubmit={addUser} style={{ marginTop: 14 }}><h3>Add user</h3><Err e={err} /><div className="row"><div><label>Name</label><input value={u.name} onChange={e => setU({ ...u, name: e.target.value })} required /></div><div><label>Email</label><input value={u.email} onChange={e => setU({ ...u, email: e.target.value })} required /></div></div><div className="row"><div><label>Role</label><select value={u.role} onChange={e => setU({ ...u, role: e.target.value })}>{Object.keys(roles.data || {}).filter(r => r !== 'super_admin').map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}</select></div><div><label>Temporary password</label><input value={u.password} onChange={e => setU({ ...u, password: e.target.value })} required /></div></div><div><button className="primary">Create user</button></div></form>
+        <h3 style={{ marginTop: 14 }}>Roles</h3><table><tbody>{Object.entries(roles.data || {}).map(([r, d]) => <tr key={r}><td className="mono">{r}</td><td className="small">{d.desc}</td></tr>)}</tbody></table></div>
+      <div><div className="card"><h2>API keys for core banking & onboarding systems</h2>{k && <div className="notice">New key (copy now, shown once): <span className="mono">{k.key}</span></div>}
+        {keys.data?.length ? <table><thead><tr><th>Label</th><th>Prefix</th><th>Last used</th><th>Active</th></tr></thead><tbody>{keys.data.map(x => <tr key={x.id}><td>{x.label}</td><td className="mono">{x.prefix}…</td><td className="small muted">{fmt.ago(x.last_used_at)}</td><td>{x.active ? 'yes' : 'revoked'}</td></tr>)}</tbody></table> : <Empty>No keys.</Empty>}<button style={{ marginTop: 10 }} onClick={addKey}>Generate API key</button>
+        <p className="small muted" style={{ marginTop: 10 }}>Send <span className="mono">x-api-key</span> on <span className="mono">POST /v1/transactions</span>, <span className="mono">/v1/transactions/ingest/&#123;finacle|t24|flexcube|mambu|finastra|bankone|nip|iso20022&#125;</span>, <span className="mono">/v1/screen</span> and <span className="mono">/v1/customers</span>.</p></div>
+        <div className="card" style={{ marginTop: 14 }}><h2>Webhooks</h2>{hooks.data?.length ? <table><tbody>{hooks.data.map(h => <tr key={h.id}><td className="mono small">{h.url}</td><td className="small">{h.events.join(', ')}</td></tr>)}</tbody></table> : <p className="muted small">Push alerts to your case-management or SIEM tool.</p>}<div className="toolbar" style={{ marginTop: 8 }}><input value={hook} onChange={e => setHook(e.target.value)} placeholder="https://…/edgeverify" /><button onClick={addHook} disabled={!hook}>Add</button></div></div></div>
+    </div>
+  </>;
+}

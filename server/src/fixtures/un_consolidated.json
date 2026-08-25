@@ -1,0 +1,158 @@
+[
+ {
+  "external_id": "QDi.401",
+  "entity_type": "person",
+  "primary_name": "Abdul Rahman Al-Sayegh",
+  "aliases": [
+   "Abdulrahman Alsayegh",
+   "Abu Omar"
+  ],
+  "dobs": [
+   "1972-05-01"
+  ],
+  "nationalities": [
+   "SY"
+  ],
+  "countries": [
+   "SY",
+   "IQ"
+  ],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Al-Qaida"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "QDe.150",
+  "entity_type": "organisation",
+  "primary_name": "Harakat Al-Nour Foundation",
+  "aliases": [
+   "Al Nour Foundation"
+  ],
+  "dobs": [],
+  "nationalities": [],
+  "countries": [
+   "SO",
+   "KE"
+  ],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Al-Qaida"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "KPi.033",
+  "entity_type": "person",
+  "primary_name": "Ri Chol-Su",
+  "aliases": [
+   "Ri Chol Su",
+   "Li Cheol-su"
+  ],
+  "dobs": [
+   "1965"
+  ],
+  "nationalities": [
+   "KP"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "DPRK"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "SOi.020",
+  "entity_type": "person",
+  "primary_name": "Omar Hassan Farah",
+  "aliases": [
+   "Omar Farah",
+   "Abu Zubeyr"
+  ],
+  "dobs": [
+   "1983-02-17"
+  ],
+  "nationalities": [
+   "SO"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Somalia"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "CFi.011",
+  "entity_type": "person",
+  "primary_name": "Jean-Pierre Bemba Nkoy",
+  "aliases": [
+   "JP Nkoy"
+  ],
+  "dobs": [
+   "1970"
+  ],
+  "nationalities": [
+   "CD"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "DRC"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "LYi.019",
+  "entity_type": "person",
+  "primary_name": "Salah Al-Din Mansour",
+  "aliases": [
+   "Salahuddin Mansour",
+   "Salah Mansur"
+  ],
+  "dobs": [
+   "1966-12-12"
+  ],
+  "nationalities": [
+   "LY"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Libya"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ }
+]

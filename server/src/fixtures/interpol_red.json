@@ -1,0 +1,78 @@
+[
+ {
+  "external_id": "RN-2024-771",
+  "entity_type": "person",
+  "primary_name": "Rashid Al-Amin Barakat",
+  "aliases": [
+   "Rashid Barakat"
+  ],
+  "dobs": [
+   "1977-08-08"
+  ],
+  "nationalities": [
+   "LB"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Fraud"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "RN-2023-140",
+  "entity_type": "person",
+  "primary_name": "Pavel Kuznetsov",
+  "aliases": [
+   "Pavlo Kuznetsov"
+  ],
+  "dobs": [
+   "1984-03-21"
+  ],
+  "nationalities": [
+   "UA",
+   "RU"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Cyber"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ },
+ {
+  "external_id": "RN-2024-902",
+  "entity_type": "person",
+  "primary_name": "Adebayo Kolawole Adeyemi",
+  "aliases": [
+   "Bayo Adeyemi"
+  ],
+  "dobs": [
+   "1990-05-05"
+  ],
+  "nationalities": [
+   "NG"
+  ],
+  "countries": [],
+  "identifiers": [],
+  "addresses": [],
+  "programs": [
+   "Human trafficking"
+  ],
+  "remarks": "",
+  "listed_on": "2021-03-15",
+  "pep_tier": null,
+  "pep_role": null,
+  "rca_of": null
+ }
+]
