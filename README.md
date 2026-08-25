@@ -51,3 +51,4 @@ server/src/db/            Knex migration (SQLite or Postgres), seed
 client/src/               React console
 docs/                     architecture, integration, benchmark
 ```
+"# edgeverify" 
