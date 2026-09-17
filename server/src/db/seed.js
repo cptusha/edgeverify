@@ -20,7 +20,9 @@ const ADAPTER = { 'LS-7D41BF56': 'ofac_sdn', 'LS-5A022320': 'un_consolidated', '
 const URLS = { 'LS-7D41BF56': 'https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.XML', 'LS-5A022320': 'https://scsanctions.un.org/resources/xml/en/consolidated.xml', 'LS-B0D28FB5': 'https://ofsistorage.blob.core.windows.net/publishlive/2022format/ConList.csv' };
 const rows = catalog.filter(c => !existing.has(c.code)).map(c => ({ code: c.code, slug: c.slug, name: c.name, list_type: c.list_type, country: c.country, region: c.region, tier: c.tier, origin: c.origin,
   adapter: ADAPTER[c.code] || 'generic', source_url: URLS[c.code] || null, refresh_hours: c.refresh_hours, enabled: Boolean(FIXTURES[c.code]) || Boolean(URLS[c.code]) }));
-for (let i = 0; i < rows.length; i += 200) await db('list_sources').insert(rows.slice(i, i + 200));
+if (rows.length > 0) {
+  for (let i = 0; i < rows.length; i += 200) await db('list_sources').insert(rows.slice(i, i + 200));
+}
 if (!existing.has('LS-PEP-GLOBAL')) await db('list_sources').insert({ code: 'LS-PEP-GLOBAL', slug: 'edgeverify-pep-register', name: 'EdgeVerify Global PEP / RCA / SIP Register', list_type: 'PEP', country: 'International', region: 'International', tier: 1, origin: 'EdgeVerify', adapter: 'generic', refresh_hours: 24, enabled: true });
 console.log(`list registry: ${rows.length} new sources (${catalog.length} total in catalogue); sources with a bundled feed are enabled, the rest are one click away`);
 
@@ -31,7 +33,8 @@ const CR = [['KP', "North Korea", 100, 1, 0], ['IR', 'Iran', 98, 1, 0], ['MM', '
   ['GH', 'Ghana', 45, 0, 0], ['EG', 'Egypt', 50, 0, 0], ['IN', 'India', 40, 0, 0], ['BR', 'Brazil', 42, 0, 0], ['MX', 'Mexico', 48, 0, 0], ['US', 'United States', 20, 0, 0], ['GB', 'United Kingdom', 18, 0, 0], ['DE', 'Germany', 15, 0, 0], ['FR', 'France', 17, 0, 0], ['CA', 'Canada', 15, 0, 0], ['AU', 'Australia', 14, 0, 0],
   ['SG', 'Singapore', 22, 0, 0], ['JP', 'Japan', 16, 0, 0], ['CH', 'Switzerland', 25, 0, 0], ['NL', 'Netherlands', 16, 0, 0], ['SA', 'Saudi Arabia', 45, 0, 0], ['QA', 'Qatar', 40, 0, 0], ['KW', 'Kuwait', 44, 0, 0], ['SE', 'Sweden', 12, 0, 0], ['NO', 'Norway', 12, 0, 0], ['ES', 'Spain', 20, 0, 0], ['IT', 'Italy', 24, 0, 0]];
 const crExisting = new Set((await db('country_risk').select('iso2')).map(r => r.iso2));
-await db('country_risk').insert(CR.filter(c => !crExisting.has(c[0])).map(([iso2, name, score, b, g]) => ({ iso2, name, score, band: score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low', fatf_blacklist: !!b, fatf_greylist: !!g, eu_high_risk: !!b || !!g })));
+const crRows = CR.filter(c => !crExisting.has(c[0])).map(([iso2, name, score, b, g]) => ({ iso2, name, score, band: score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low', fatf_blacklist: !!b, fatf_greylist: !!g, eu_high_risk: !!b || !!g }));
+if (crRows.length > 0) await db('country_risk').insert(crRows);
 
 // 3. Demo tenant, users, API key, rules
 const tenantId = 'tnt_demo_bank';
@@ -68,19 +71,14 @@ if (!(await db('customers').where({ tenant_id: tenantId }).first())) {
     await db('customers').insert(row); ids[d.external_ref] = row.id;
     await onboardOrRescore(tenantId, { ...row, products: d.products || [], ubos: d.ubos || [] }, 'seed', { screen: true });
   }
-  // Transaction history: normal activity + a structuring pattern + a pass-through + a sanctioned counterparty
   const day = (n, h = 10) => new Date(Date.now() - n * 86400e3 + h * 3600e3 - 10 * 3600e3).toISOString();
   const txs = [];
   for (let i = 30; i > 0; i--) txs.push({ customer_id: ids['CIF-100001'], account_id: 'ACC-1', direction: i % 5 === 0 ? 'credit' : 'debit', tx_type: i % 5 === 0 ? 'transfer' : 'card', amount: 15000 + (i * 1337) % 40000, currency: 'NGN', counterparty_name: 'Shoprite Lekki', counterparty_account: 'MERCH-0' + (i % 3), counterparty_country: 'NG', channel: 'pos', device_id: 'dev-A', occurred_at: day(i) });
   for (let i = 40; i > 0; i -= 2) txs.push({ customer_id: ids['CIF-100005'], account_id: 'ACC-5', direction: 'credit', tx_type: 'transfer', amount: 2_000_000 + (i * 91) % 900000, currency: 'NGN', counterparty_name: 'Dangote Cement Distributors', counterparty_account: 'DCD-1', counterparty_country: 'NG', channel: 'nip', occurred_at: day(i) });
-  // structuring: 4 cash deposits of $9,500-equiv within one day
   for (let k = 0; k < 4; k++) txs.push({ customer_id: ids['CIF-100003'], account_id: 'ACC-3', direction: 'credit', tx_type: 'cash', amount: 9500, currency: 'USD', channel: 'branch', occurred_at: day(2, 9 + k) });
-  // pass-through: big credit then immediate debit abroad
   txs.push({ customer_id: ids['CIF-100004'], account_id: 'ACC-4', direction: 'credit', tx_type: 'transfer', amount: 48000, currency: 'GBP', counterparty_name: 'Bright Star Ventures', counterparty_account: 'GB29NWBK60161331926819', counterparty_country: 'GB', channel: 'faster_payments', occurred_at: day(1, 8) });
   txs.push({ customer_id: ids['CIF-100004'], account_id: 'ACC-4', direction: 'debit', tx_type: 'crypto', amount: 45000, currency: 'GBP', counterparty_name: 'Binance Exchange', counterparty_account: 'binance-hot-01', counterparty_country: 'AE', channel: 'crypto_exchange', device_id: 'dev-new-iphone', occurred_at: day(1, 11) });
-  // sanctioned counterparty (matches synthetic OFAC record)
   txs.push({ customer_id: ids['CIF-100008'], account_id: 'ACC-8', direction: 'debit', tx_type: 'wire', amount: 250000, currency: 'USD', counterparty_name: 'Al Hasan Trading Company', counterparty_account: 'AE07033100000000000000', counterparty_country: 'AE', destination_country: 'IR', channel: 'swift', occurred_at: day(0, 9) });
-  // PEP outbound
   txs.push({ customer_id: ids['CIF-100002'], account_id: 'ACC-2', direction: 'debit', tx_type: 'wire', amount: 120000, currency: 'USD', counterparty_name: 'Hudson Realty Partners', counterparty_account: 'US-HRP-1', counterparty_country: 'US', destination_country: 'US', channel: 'swift', occurred_at: day(3, 14) });
   txs.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
   for (const t of txs) await monitorTransaction(tenantId, { ...t, screen_counterparty: true }, 'seed');
