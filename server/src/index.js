@@ -51,4 +51,18 @@ registerFixtures(FIXTURES);
 // Scheduled list refresh
 setInterval(async () => { const srcs = await db('list_sources').where({ enabled: true }); for (const s of srcs) await syncSource({ ...s, fixture: FIXTURE_MAP[s.code] }); }, config.listRefreshMinutes * 60_000).unref();
 
-app.listen(config.port, () => console.log(`EdgeVerify API on :${config.port} (${config.databaseUrl ? 'postgres' : 'standalone sqlite'})`));
+app.listen(config.port, () => {
+  console.log(`EdgeVerify API on :${config.port} (${config.databaseUrl ? 'postgres' : 'standalone sqlite'})`);
+
+  // Keep-alive: ping our own health endpoint every 10 minutes so Render
+  // free-tier does not spin the service down after 15 minutes of inactivity.
+  if (process.env.SELF_URL) {
+    const INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+    setInterval(() => {
+      fetch(`${process.env.SELF_URL}/health`)
+        .then(() => console.log('[keep-alive] ping ok'))
+        .catch(e => console.warn('[keep-alive] ping failed:', e.message));
+    }, INTERVAL_MS).unref();
+    console.log(`[keep-alive] pinging ${process.env.SELF_URL}/health every 10 minutes`);
+  }
+});
