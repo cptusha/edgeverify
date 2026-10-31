@@ -4,6 +4,7 @@ import { session } from './api.js';
 import Login from './pages/Login.jsx';
 import Overview from './pages/Overview.jsx';
 import Screening from './pages/Screening.jsx';
+import BulkScreen from './pages/BulkScreen.jsx';
 import Customers, { CustomerDetail } from './pages/Customers.jsx';
 import Transactions from './pages/Transactions.jsx';
 import Alerts, { AlertDetail } from './pages/Alerts.jsx';
@@ -11,10 +12,13 @@ import Rules from './pages/Rules.jsx';
 import Lists from './pages/Lists.jsx';
 import Audit from './pages/Audit.jsx';
 import Admin from './pages/Admin.jsx';
+import StrReports, { StrReportDetail } from './pages/StrReports.jsx';
+import CountryRisk from './pages/CountryRisk.jsx';
 
 const NAV = [
   { s: 'Monitor' }, { to: '/', l: 'Overview' }, { to: '/alerts', l: 'Alerts & cases' }, { to: '/transactions', l: 'Transactions' },
-  { s: 'Know your customer' }, { to: '/screen', l: 'Screen a name' }, { to: '/customers', l: 'Customers' },
+  { s: 'Know your customer' }, { to: '/screen', l: 'Screen a name' }, { to: '/bulk-screen', l: 'Bulk screening' }, { to: '/customers', l: 'Customers' },
+  { s: 'Compliance' }, { to: '/str-reports', l: 'STR / CTR reports', roles: ['compliance_officer', 'tenant_admin', 'super_admin', 'auditor'] }, { to: '/country-risk', l: 'Country risk' },
   { s: 'Configure' }, { to: '/rules', l: 'Rules' }, { to: '/lists', l: 'List registry' }, { to: '/admin', l: 'Users & API keys', roles: ['tenant_admin', 'super_admin', 'auditor'] },
   { s: 'Assurance' }, { to: '/audit', l: 'Audit log', roles: ['tenant_admin', 'super_admin', 'auditor', 'compliance_officer'] },
 ];
@@ -34,6 +38,9 @@ export default function App() {
         <Route path="/screen" element={<Screening />} /><Route path="/customers" element={<Customers />} /><Route path="/customers/:id" element={<CustomerDetail />} />
         <Route path="/transactions" element={<Transactions />} /><Route path="/alerts" element={<Alerts />} /><Route path="/alerts/:id" element={<AlertDetail />} />
         <Route path="/rules" element={<Rules />} /><Route path="/lists" element={<Lists />} /><Route path="/audit" element={<Audit />} /><Route path="/admin" element={<Admin />} />
+        <Route path="/bulk-screen" element={<BulkScreen />} />
+        <Route path="/str-reports" element={<StrReports />} /><Route path="/str-reports/:id" element={<StrReportDetail />} />
+        <Route path="/country-risk" element={<CountryRisk />} />
       </Routes>
     </main>
   </div>;

@@ -92,4 +92,18 @@ export async function up(db) {
     t.string('iso2').primary(); t.string('name'); t.integer('score'); t.string('band');
     t.boolean('fatf_blacklist').defaultTo(false); t.boolean('fatf_greylist').defaultTo(false); t.boolean('eu_high_risk').defaultTo(false);
   });
+
+  if (!(await has('str_reports'))) await db.schema.createTable('str_reports', t => {
+    t.string('id').primary(); t.string('tenant_id').index(); t.string('reference'); t.string('status').defaultTo('draft').index();
+    t.string('customer_id').index(); t.json('alert_ids'); t.json('transaction_ids');
+    t.string('report_type').defaultTo('STR'); // STR or CTR
+    t.string('subject_name'); t.string('subject_account'); t.string('subject_country');
+    t.decimal('amount_reported', 18, 2); t.string('currency_reported');
+    t.timestamp('activity_from_at'); t.timestamp('activity_to_at');
+    t.text('grounds_for_suspicion'); t.text('nature_of_suspicious_activity'); t.text('actions_taken');
+    t.string('filed_with'); // e.g. 'NFIU', 'FinCEN', 'NCA'
+    t.string('regulator_ref'); // reference number assigned by the regulator
+    t.timestamp('filed_at'); t.string('filed_by');
+    t.string('created_by'); t.timestamps(true, true);
+  });
 }

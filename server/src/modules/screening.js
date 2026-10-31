@@ -76,6 +76,34 @@ screeningRouter.post('/batch', requireRole('tenant_admin', 'compliance_officer',
   } catch (e) { next(e); }
 });
 
+// Bulk screening: accept names as text (newline or comma separated) or JSON array,
+// run all through the engine, and respond with JSON summary + optional CSV download.
+screeningRouter.post('/bulk', requireRole('tenant_admin', 'compliance_officer', 'analyst', 'api_client'), async (req, res, next) => {
+  try {
+    const { names, threshold, format = 'json' } = req.body;
+    if (!names) return res.status(400).json({ error: 'names is required: a newline- or comma-separated string, or an array of strings.' });
+    const nameList = Array.isArray(names)
+      ? names
+      : String(names).split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    if (nameList.length > 500) return res.status(400).json({ error: 'Maximum 500 names per bulk request.' });
+    const results = [];
+    for (const name of nameList) {
+      if (!name || name.length < 2) { results.push({ name, outcome: 'skipped', reason: 'too short', top_score: 0, match_count: 0 }); continue; }
+      const r = await runScreening(req.actor.tenant_id, { name, threshold: threshold ? Number(threshold) : undefined, context: 'adhoc', max_results: 5 }, req.actor.id);
+      results.push({ name, outcome: r.outcome, top_score: r.top_score, match_count: r.match_count,
+        top_match: r.matches[0] ? `${r.matches[0].matched_name} (${r.matches[0].list?.name})` : '', screening_id: r.id });
+    }
+    if (format === 'csv') {
+      const header = 'name,outcome,top_score,match_count,top_match,screening_id\n';
+      const rows = results.map(r => [r.name, r.outcome, r.top_score, r.match_count, `"${(r.top_match || '').replace(/"/g, '""')}"`, r.screening_id || ''].join(',')).join('\n');
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="bulk-screening-${new Date().toISOString().slice(0,10)}.csv"`);
+      return res.send(header + rows);
+    }
+    res.json({ count: results.length, hits: results.filter(r => r.outcome !== 'clear' && r.outcome !== 'skipped').length, results });
+  } catch (e) { next(e); }
+});
+
 screeningRouter.get('/', async (req, res) => {
   const { customer_id, outcome, limit = 50 } = req.query;
   const rows = await db('screenings').where({ tenant_id: req.actor.tenant_id }).modify(q => { if (customer_id) q.where({ customer_id }); if (outcome) q.where({ outcome }); }).orderBy('created_at', 'desc').limit(Number(limit));

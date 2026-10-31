@@ -13,6 +13,8 @@ import { transactionsRouter } from './modules/transactions.js';
 import { alertsRouter, casesRouter } from './modules/alerts.js';
 import { listsRouter, syncSource, FIXTURE_MAP, registerFixtures } from './modules/lists.js';
 import { dashboardsRouter } from './modules/dashboards.js';
+import { strRouter } from './modules/str.js';
+import { countryRiskRouter } from './modules/country_risk.js';
 import { FIXTURES } from './fixtures/index.js';
 
 const app = express();
@@ -35,6 +37,8 @@ v1.use('/cases', casesRouter);
 v1.use('/lists', listsRouter);
 v1.use('/dashboards', dashboardsRouter);
 v1.use('/admin', adminRouter);
+v1.use('/str-reports', strRouter);
+v1.use('/country-risk', countryRiskRouter);
 app.use('/v1', v1);
 
 // Standalone mode: serve the built console from the same process (client/dist). API-only deployments just don't ship the dist folder.
