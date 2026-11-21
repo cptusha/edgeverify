@@ -8,14 +8,26 @@ import { audit, verifyChain } from '../middleware/audit.js';
 import { expandBuiltins } from '../engine/rules.js';
 import { DEFAULT_RISK_CONFIG } from '../engine/risk.js';
 import { sendPasswordReset } from '../services/email.js';
+import speakeasy from 'speakeasy';
+import qrcode from 'qrcode';
+import { createSession } from '../middleware/auth.js';
 
 export const authRouter = Router();
 authRouter.post('/login', async (req, res) => {
-  const { email, password, tenant_id } = req.body;
+  const { email, password, tenant_id, totp_code } = req.body;
   const u = await db('users').where({ email }).modify(q => { if (tenant_id) q.where({ tenant_id }); }).first();
   if (!u || !u.active || !(await bcrypt.compare(password, u.password_hash))) return res.status(401).json({ error: 'Invalid credentials' });
+
+  // If 2FA is enabled, require a TOTP code
+  if (u.totp_enabled && u.totp_secret) {
+    if (!totp_code) return res.status(200).json({ totp_required: true }); // frontend shows TOTP prompt
+    const valid = speakeasy.totp.verify({ secret: u.totp_secret, encoding: 'base32', token: String(totp_code), window: 1 });
+    if (!valid) return res.status(401).json({ error: 'Invalid authenticator code' });
+  }
+
+  const sessionId = await createSession(u, { ip: req.ip, userAgent: req.get('user-agent') });
   await audit({ actor: { id: u.id, type: 'user', tenant_id: u.tenant_id }, ip: req.ip, get: (h) => req.get(h) }, { action: 'auth.login', resource_type: 'user', resource_id: u.id });
-  res.json({ token: issueToken(u), user: { id: u.id, name: u.name, email: u.email, role: u.role, tenant_id: u.tenant_id } });
+  res.json({ token: issueToken(u, sessionId), user: { id: u.id, name: u.name, email: u.email, role: u.role, tenant_id: u.tenant_id, totp_enabled: u.totp_enabled } });
 });
 authRouter.get('/me', (req, res) => res.json(req.actor));
 authRouter.get('/roles', (req, res) => res.json(ROLES));
@@ -174,3 +186,62 @@ adminRouter.get('/audit', requireRole('tenant_admin', 'auditor', 'compliance_off
 adminRouter.get('/audit/verify', requireRole('tenant_admin', 'auditor'), async (req, res) => res.json(await verifyChain(req.actor.tenant_id)));
 adminRouter.get('/tenant', async (req, res) => { const t = await db('tenants').where({ id: req.actor.tenant_id }).first(); res.json({ ...t, settings: j(t.settings), risk_config: j(t.risk_config) }); });
 adminRouter.put('/tenant/settings', requireRole('tenant_admin'), async (req, res) => { await db('tenants').where({ id: req.actor.tenant_id }).update({ settings: JSON.stringify(req.body) }); res.json(req.body); });
+
+// ── 2FA (TOTP) ──────────────────────────────────────────────────────────────
+
+// Step 1: generate a secret + QR code — user scans with their authenticator app
+authRouter.post('/2fa/setup', async (req, res) => {
+  const user = await db('users').where({ id: req.actor.id }).first();
+  if (user.totp_enabled) return res.status(400).json({ error: '2FA is already enabled. Disable it first.' });
+  const secret = speakeasy.generateSecret({ name: `EdgeVerify (${user.email})`, issuer: 'EdgeVerify' });
+  // Store secret temporarily (not yet activated — user must verify first)
+  await db('users').where({ id: user.id }).update({ totp_secret: secret.base32 });
+  const qr = await qrcode.toDataURL(secret.otpauth_url);
+  res.json({ secret: secret.base32, qr }); // qr is a data: URI the frontend renders as <img>
+});
+
+// Step 2: verify the code from the app to activate 2FA
+authRouter.post('/2fa/verify', async (req, res) => {
+  const { code } = req.body;
+  const user = await db('users').where({ id: req.actor.id }).first();
+  if (!user.totp_secret) return res.status(400).json({ error: 'Run /2fa/setup first' });
+  const valid = speakeasy.totp.verify({ secret: user.totp_secret, encoding: 'base32', token: String(code), window: 1 });
+  if (!valid) return res.status(400).json({ error: 'Code is incorrect. Try again.' });
+  await db('users').where({ id: user.id }).update({ totp_enabled: true });
+  res.json({ ok: true, message: '2FA enabled successfully.' });
+});
+
+// Disable 2FA (requires current TOTP code or password as confirmation)
+authRouter.post('/2fa/disable', async (req, res) => {
+  const { code, password } = req.body;
+  const user = await db('users').where({ id: req.actor.id }).first();
+  if (!user.totp_enabled) return res.status(400).json({ error: '2FA is not enabled.' });
+  // Verify by TOTP code or by password (whichever they provide)
+  let confirmed = false;
+  if (code) confirmed = speakeasy.totp.verify({ secret: user.totp_secret, encoding: 'base32', token: String(code), window: 1 });
+  if (!confirmed && password) confirmed = await bcrypt.compare(password, user.password_hash);
+  if (!confirmed) return res.status(401).json({ error: 'Invalid code or password.' });
+  await db('users').where({ id: user.id }).update({ totp_enabled: false, totp_secret: null });
+  res.json({ ok: true, message: '2FA disabled.' });
+});
+
+// ── Sessions ─────────────────────────────────────────────────────────────────
+
+// List active sessions for the current user
+authRouter.get('/sessions', async (req, res) => {
+  const rows = await db('user_sessions').where({ user_id: req.actor.id, active: true }).orderBy('last_seen_at', 'desc');
+  res.json(rows.map(r => ({ ...r, current: r.id === req.actor.jti })));
+});
+
+// Revoke a specific session
+authRouter.delete('/sessions/:id', async (req, res) => {
+  const n = await db('user_sessions').where({ id: req.params.id, user_id: req.actor.id }).update({ active: false });
+  if (!n) return res.status(404).json({ error: 'Session not found' });
+  res.json({ ok: true });
+});
+
+// Revoke all sessions except current
+authRouter.post('/sessions/revoke-all', async (req, res) => {
+  await db('user_sessions').where({ user_id: req.actor.id, active: true }).whereNot({ id: req.actor.jti || '' }).update({ active: false });
+  res.json({ ok: true });
+});

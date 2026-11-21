@@ -28,10 +28,17 @@ export async function authenticate(req, res, next) {
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'Authentication required' });
     const payload = jwt.verify(token, config.jwtSecret);
-    req.actor = { id: payload.sub, type: 'user', role: payload.role, tenant_id: payload.tenant_id, email: payload.email, name: payload.name };
+    // Check session not revoked (non-blocking for tokens without jti)
+    if (payload.jti) {
+      const valid = await touchSession(payload.jti);
+      if (!valid) return res.status(401).json({ error: 'Session has been revoked' });
+    }
+    req.actor = { id: payload.sub, type: 'user', role: payload.role, tenant_id: payload.tenant_id, email: payload.email, name: payload.name, jti: payload.jti };
     // super_admin may act on behalf of a tenant
     const asTenant = req.header('x-tenant-id');
     if (asTenant && payload.role === 'super_admin') req.actor.tenant_id = asTenant;
+    // super_admin impersonation token
+    if (payload.impersonating) req.actor.impersonating = payload.impersonating;
     next();
   } catch (e) { res.status(401).json({ error: 'Invalid or expired token' }); }
 }
@@ -48,4 +55,26 @@ export const minLevel = (lvl) => (req, res, next) => {
   res.status(403).json({ error: 'Insufficient privileges' });
 };
 
-export const issueToken = (user) => jwt.sign({ sub: user.id, role: user.role, tenant_id: user.tenant_id, email: user.email, name: user.name }, config.jwtSecret, { expiresIn: '12h' });
+// Issue a JWT and record the session. sessionId ties the token to a revocable row.
+export const issueToken = (user, sessionId = null) => {
+  const jti = sessionId || crypto.randomUUID();
+  return jwt.sign({ sub: user.id, role: user.role, tenant_id: user.tenant_id, email: user.email, name: user.name, jti }, config.jwtSecret, { expiresIn: '12h' });
+};
+
+// Record a new session in the DB (called on login)
+export async function createSession(user, { ip, userAgent } = {}) {
+  const { v4: uuid } = await import('uuid');
+  const id = uuid();
+  await db('user_sessions').insert({ id, user_id: user.id, tenant_id: user.tenant_id, ip, user_agent: userAgent, active: true, last_seen_at: db.fn.now() });
+  return id;
+}
+
+// Update last_seen_at and check session is still active
+export async function touchSession(jti) {
+  if (!jti) return true; // tokens issued before sessions feature still work
+  const row = await db('user_sessions').where({ id: jti }).first();
+  if (!row) return true; // unknown jti — allow (backward compat)
+  if (!row.active) return false; // revoked
+  await db('user_sessions').where({ id: jti }).update({ last_seen_at: db.fn.now() });
+  return true;
+}

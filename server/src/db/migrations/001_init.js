@@ -155,4 +155,23 @@ export async function up(db) {
   // Notes field on tenants for operator use (idempotent)
   const hasNotes = await db.schema.hasColumn('tenants', 'notes');
   if (!hasNotes) await db.schema.table('tenants', t => { t.text('notes'); });
+
+  // 2FA columns on users (idempotent)
+  const hasTotp = await db.schema.hasColumn('users', 'totp_secret');
+  if (!hasTotp) await db.schema.table('users', t => {
+    t.string('totp_secret');           // encrypted TOTP secret
+    t.boolean('totp_enabled').defaultTo(false);
+  });
+
+  // User sessions — track logins for session management and revocation
+  if (!(await has('user_sessions'))) await db.schema.createTable('user_sessions', t => {
+    t.string('id').primary();          // session id embedded in JWT jti claim
+    t.string('user_id').notNullable().index();
+    t.string('tenant_id').index();
+    t.string('ip');
+    t.string('user_agent');
+    t.boolean('active').defaultTo(true).index();
+    t.timestamp('last_seen_at');
+    t.timestamps(true, true);
+  });
 }
