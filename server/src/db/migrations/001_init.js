@@ -106,4 +106,20 @@ export async function up(db) {
     t.timestamp('filed_at'); t.string('filed_by');
     t.string('created_by'); t.timestamps(true, true);
   });
+
+  // Operator notices — broadcast messages from SETS to all tenants or a specific plan tier
+  if (!(await has('operator_notices'))) await db.schema.createTable('operator_notices', t => {
+    t.string('id').primary();
+    t.string('title').notNullable();
+    t.text('body').notNullable();
+    t.string('level').defaultTo('info'); // info | warning | critical
+    t.string('target_plan'); // null = all plans; 'startup'|'growth'|'enterprise' = targeted
+    t.boolean('active').defaultTo(true);
+    t.string('created_by');
+    t.timestamps(true, true);
+  });
+
+  // Add 'active' column to tenants if it doesn't exist (idempotent column add)
+  const hasActivCol = await db.schema.hasColumn('tenants', 'active');
+  if (!hasActivCol) await db.schema.table('tenants', t => { t.boolean('active').defaultTo(true); });
 }

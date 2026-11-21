@@ -215,3 +215,13 @@ pre { background: #0B1F3A; color: #DCE4EE; padding: 12px; border-radius: var(--r
   .lp-hero { padding: 60px 16px 40px; }
   .lp-section { padding: 60px 16px; }
 }
+
+/* ── OPERATOR CONSOLE ── */
+.op-drawer { padding: 0; }
+.op-drawer-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); gap: 12px; }
+.op-drawer-head button:first-child { background: none; border: none; color: var(--teal-ink); padding: 6px 0; font-weight: 500; }
+.op-drawer-head button:first-child:hover { text-decoration: underline; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: var(--teal-soft); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }

@@ -15,6 +15,7 @@ import Audit from './pages/Audit.jsx';
 import Admin from './pages/Admin.jsx';
 import StrReports, { StrReportDetail } from './pages/StrReports.jsx';
 import CountryRisk from './pages/CountryRisk.jsx';
+import Operator from './pages/Operator.jsx';
 
 const NAV = [
   { s: 'Monitor' }, { to: '/', l: 'Overview' }, { to: '/alerts', l: 'Alerts & cases' }, { to: '/transactions', l: 'Transactions' },
@@ -22,6 +23,7 @@ const NAV = [
   { s: 'Compliance' }, { to: '/str-reports', l: 'STR / CTR reports', roles: ['compliance_officer', 'tenant_admin', 'super_admin', 'auditor'] }, { to: '/country-risk', l: 'Country risk' },
   { s: 'Configure' }, { to: '/rules', l: 'Rules' }, { to: '/lists', l: 'List registry' }, { to: '/admin', l: 'Users & API keys', roles: ['tenant_admin', 'super_admin', 'auditor'] },
   { s: 'Assurance' }, { to: '/audit', l: 'Audit log', roles: ['tenant_admin', 'super_admin', 'auditor', 'compliance_officer'] },
+  { s: 'SETS Console', roles: ['super_admin'] }, { to: '/operator', l: 'Operator console', roles: ['super_admin'] },
 ];
 
 export default function App() {
@@ -41,7 +43,7 @@ export default function App() {
   return <div className="shell">
     <nav className="nav">
       <div className="brand"><span className="mark" />EdgeVerify</div>
-      {NAV.map((n, i) => n.s ? <div className="section" key={i}>{n.s}</div> : (!n.roles || n.roles.includes(s.user.role)) && <NavLink key={n.to} to={n.to} end={n.to === '/app'}>{n.l}</NavLink>)}
+      {NAV.map((n, i) => n.s ? ((!n.roles || n.roles.includes(s.user.role)) && <div className="section" key={i}>{n.s}</div>) : (!n.roles || n.roles.includes(s.user.role)) && <NavLink key={n.to} to={n.to} end={n.to === '/app'}>{n.l}</NavLink>)}
       <div className="user"><b>{s.user.name}</b>{s.user.role.replace(/_/g, ' ')} · {s.user.email}<button onClick={() => { session.clear(); nav('/'); location.reload(); }}>Sign out</button></div>
     </nav>
     <main className="main">
@@ -55,6 +57,7 @@ export default function App() {
         <Route path="/bulk-screen" element={<BulkScreen />} />
         <Route path="/str-reports" element={<StrReports />} /><Route path="/str-reports/:id" element={<StrReportDetail />} />
         <Route path="/country-risk" element={<CountryRisk />} />
+        <Route path="/operator" element={<Operator />} />
       </Routes>
     </main>
   </div>;
