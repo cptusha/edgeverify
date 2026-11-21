@@ -1,7 +1,7 @@
 {
   "name": "edgeverify-server",
   "version": "0.1.0",
-  "description": "EdgeVerify — AML screening, transaction monitoring & KYC risk engine",
+  "description": "EdgeVerify \u2014 AML screening, transaction monitoring & KYC risk engine",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -9,13 +9,15 @@
     "dev": "node --watch src/index.js",
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js",
+    "lockdown-demo": "node src/db/lockdown-demo.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.10.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
     "express-rate-limit": "^7.5.0",
     "fast-xml-parser": "^4.5.1",
     "helmet": "^8.0.0",

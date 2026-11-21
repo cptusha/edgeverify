@@ -1,0 +1,18 @@
+# Dependencies (installed by npm ci on Render and in Docker)
+node_modules/
+
+# Local databases
+server/data/
+*.sqlite
+*.sqlite-journal
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
