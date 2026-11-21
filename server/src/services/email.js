@@ -13,28 +13,52 @@ import nodemailer from 'nodemailer';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 const FROM = process.env.SMTP_FROM || 'EdgeVerify <noreply@edgeverify.io>';
 
-function makeTransport() {
-  if (!process.env.SMTP_HOST) {
-    // No SMTP configured — use Ethereal (auto-created test account) in dev, or just log
+let _transport = null;
+let _etherealUser = null;
+
+async function getTransport() {
+  if (_transport) return _transport;
+
+  if (process.env.SMTP_HOST) {
+    _transport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: Number(process.env.SMTP_PORT) === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    });
+    return _transport;
+  }
+
+  // No SMTP configured — spin up a free Ethereal test account.
+  // Emails are captured at https://ethereal.email and never actually delivered.
+  try {
+    const account = await nodemailer.createTestAccount();
+    _etherealUser = account.user;
+    _transport = nodemailer.createTransport({
+      host: 'smtp.ethereal.email', port: 587, secure: false,
+      auth: { user: account.user, pass: account.pass },
+    });
+    console.log(`[email] No SMTP configured — using Ethereal test inbox`);
+    console.log(`[email] View sent emails at https://ethereal.email/login`);
+    console.log(`[email] Ethereal login: ${account.user} / ${account.pass}`);
+    return _transport;
+  } catch (e) {
+    console.warn('[email] Could not create Ethereal account:', e.message, '— emails will be logged only');
     return null;
   }
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
 }
 
-const transport = makeTransport();
-
 async function send({ to, subject, html, text }) {
+  const transport = await getTransport();
   if (!transport) {
-    console.log(`[email] (no SMTP — would send to ${to}) Subject: ${subject}`);
+    console.log(`[email] (no transport) To: ${to} | Subject: ${subject}`);
     return;
   }
   try {
-    await transport.sendMail({ from: FROM, to, subject, html, text });
+    const info = await transport.sendMail({ from: FROM, to, subject, html, text });
+    // Ethereal gives a preview URL — log it so you can click through and see the email
+    const previewUrl = nodemailer.getTestMessageUrl(info);
+    if (previewUrl) console.log(`[email] Preview: ${previewUrl}`);
   } catch (e) {
     console.error(`[email] failed to send to ${to}:`, e.message);
   }
