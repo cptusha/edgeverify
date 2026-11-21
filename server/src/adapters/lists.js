@@ -87,4 +87,34 @@ export function loadFixture(name) { return JSON.parse(fs.readFileSync(path.join(
 
 const mapType = (t) => ({ Individual: 'person', Entity: 'organisation', Vessel: 'vessel', Aircraft: 'aircraft' }[t] || 'organisation');
 
-export const ADAPTERS = { ofac_sdn: parseOfacSdn, un_consolidated: parseUnConsolidated, uk_ofsi: parseOfsiCsv, generic: parseGeneric };
+// EU Financial Sanctions Files (XML 1.1)
+// Source: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content
+export function parseEuFsf(text) {
+  const doc = xml.parse(text);
+  const root = doc.export || doc;
+  const out = [];
+  for (const e of arr(root.sanctionEntity)) {
+    const names = arr(e.nameAliasList?.nameAlias);
+    const primary = names.find(n => n['@_regulationLanguage'] === 'eng' && n['@_strong'] === 'true') || names[0];
+    if (!primary) continue;
+    const pName = [primary['@_firstName'], primary['@_middleName'], primary['@_lastName']].filter(Boolean).join(' ').trim() || primary['@_wholeName'] || '';
+    if (!pName) continue;
+    out.push({
+      external_id: String(e['@_logicalId'] || e['@_euReferenceNumber'] || ''),
+      entity_type: (e['@_subjectType'] || '').toLowerCase().includes('person') ? 'person' : 'organisation',
+      primary_name: pName,
+      aliases: names.filter(n => n !== primary).map(n => ([n['@_firstName'], n['@_middleName'], n['@_lastName']].filter(Boolean).join(' ').trim() || n['@_wholeName'] || '')).filter(Boolean),
+      dobs: arr(e.birthdate).map(d => d['@_birthdate'] || d['@_year']).filter(Boolean),
+      nationalities: arr(e.citizenship).map(c => c['@_countryIso2Code']).filter(Boolean),
+      countries: arr(e.address).map(a => a['@_countryIso2Code']).filter(Boolean),
+      identifiers: arr(e.identification).map(i => ({ type: i['@_identificationTypeCode'], value: i['@_number'], country: i['@_countryIso2Code'] })),
+      addresses: arr(e.address).map(a => [a['@_street'], a['@_city'], a['@_countryDescription']].filter(Boolean).join(', ')),
+      programs: arr(e.regulation).map(r => r['@_programme']).filter(Boolean),
+      remarks: arr(e.remark).map(r => r).join(' ') || '',
+      listed_on: e['@_unitedNationId'] ? null : (arr(e.regulation)[0]?.['@_entryIntoForceDate'] || null),
+    });
+  }
+  return out;
+}
+
+export const ADAPTERS = { ofac_sdn: parseOfacSdn, un_consolidated: parseUnConsolidated, uk_ofsi: parseOfsiCsv, eu_fsf: parseEuFsf, generic: parseGeneric };

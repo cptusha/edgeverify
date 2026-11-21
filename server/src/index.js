@@ -13,7 +13,7 @@ import { screeningRouter } from './modules/screening.js';
 import { customersRouter } from './modules/customers.js';
 import { transactionsRouter } from './modules/transactions.js';
 import { alertsRouter, casesRouter } from './modules/alerts.js';
-import { listsRouter, syncSource, FIXTURE_MAP, registerFixtures } from './modules/lists.js';
+import { listsRouter, syncSource, FIXTURE_MAP, registerFixtures, seedLiveSources, runScheduledRefresh } from './modules/lists.js';
 import { dashboardsRouter } from './modules/dashboards.js';
 import { strRouter } from './modules/str.js';
 import { countryRiskRouter } from './modules/country_risk.js';
@@ -62,16 +62,22 @@ process.on('unhandledRejection', (err) => { console.error('[unhandledRejection]'
 process.on('uncaughtException', (err) => { console.error('[uncaughtException]', err); process.exit(1); });
 
 registerFixtures(FIXTURES);
-// Scheduled list refresh. One failing source must not stop the others or crash the server.
+
+// Seed the four live sources on startup, then run an immediate refresh cycle.
+// seedLiveSources is idempotent — safe on every restart.
+seedLiveSources()
+  .then(() => runScheduledRefresh())
+  .then(r => { if (r.synced > 0) console.log(`[list-refresh] startup sync: ${r.synced}/${r.checked} sources refreshed`); })
+  .catch(e => console.error('[list-refresh] startup failed:', e.message));
+
+// Scheduled refresh: check every 30 minutes; each source decides for itself
+// whether it is due based on its refresh_hours setting (default 24h).
 setInterval(async () => {
   try {
-    const srcs = await db('list_sources').where({ enabled: true });
-    for (const s of srcs) {
-      try { await syncSource({ ...s, fixture: FIXTURE_MAP[s.code] }); }
-      catch (e) { console.error(`[list-refresh] ${s.code} failed:`, e.message); }
-    }
-  } catch (e) { console.error('[list-refresh] failed:', e.message); }
-}, config.listRefreshMinutes * 60_000).unref();
+    const r = await runScheduledRefresh();
+    if (r.synced > 0) console.log(`[list-refresh] scheduled: ${r.synced}/${r.checked} sources refreshed`);
+  } catch (e) { console.error('[list-refresh] scheduled run failed:', e.message); }
+}, 30 * 60_000).unref();
 
 app.listen(config.port, () => {
   console.log(`EdgeVerify API on :${config.port} (${config.databaseUrl ? 'postgres' : 'standalone sqlite'})`);

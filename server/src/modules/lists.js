@@ -101,3 +101,77 @@ listsRouter.get('/entries/:id', async (req, res) => {
 // Which catalogue codes have a bundled fixture (demo / air-gapped). Codes = sha1 of the catalogue name (see data/list_catalog.json).
 export const FIXTURE_MAP = {};
 export function registerFixtures(map) { Object.assign(FIXTURE_MAP, map); }
+
+/**
+ * LIVE SANCTIONS REFRESH
+ *
+ * The four priority sources are enabled by default and refreshed on a schedule.
+ * Each source has its own refresh_hours; the scheduler wakes every minute and
+ * syncs any source that is overdue (last_synced_at is null or older than refresh_hours).
+ *
+ * To activate live fetching, set LIST_FETCH_ENABLED=true in the environment.
+ * Without it the scheduler still runs but falls back to fixtures (demo mode).
+ *
+ * Sources:
+ *   OFAC SDN          — 24h  — US Treasury designated nationals
+ *   UN Consolidated   — 24h  — UN Security Council sanctions
+ *   UK HMT / OFSI     — 24h  — UK Office of Financial Sanctions Implementation
+ *   EU FSF            — 24h  — EU Financial Sanctions File (full XML)
+ */
+export const LIVE_SOURCES = [
+  { code: 'LS-7D41BF56', name: 'US OFAC SDN List',               adapter: 'ofac_sdn',       source_url: 'https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN.XML',                                        list_type: 'Sanctions', country: 'US',            region: 'Americas',       tier: 1, refresh_hours: 24 },
+  { code: 'LS-5A022320', name: 'UN Consolidated Sanctions',       adapter: 'un_consolidated', source_url: 'https://scsanctions.un.org/resources/xml/en/consolidated.xml',                                                              list_type: 'Sanctions', country: 'International', region: 'International',  tier: 1, refresh_hours: 24 },
+  { code: 'LS-B0D28FB5', name: 'UK HM Treasury OFSI',            adapter: 'uk_ofsi',        source_url: 'https://ofsistorage.blob.core.windows.net/publishlive/2022format/ConList.csv',                                               list_type: 'Sanctions', country: 'GB',            region: 'Europe',         tier: 1, refresh_hours: 24 },
+  { code: 'LS-1D5CF011', name: 'EU Financial Sanctions File',     adapter: 'eu_fsf',         source_url: 'https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw',                   list_type: 'Sanctions', country: 'EU',            region: 'Europe',         tier: 1, refresh_hours: 24 },
+];
+
+/**
+ * Ensure the four live sources exist in list_sources and are enabled.
+ * Safe to call on every startup — uses upsert-style logic (insert if missing, patch adapter/url if changed).
+ */
+export async function seedLiveSources() {
+  for (const src of LIVE_SOURCES) {
+    const existing = await db('list_sources').where({ code: src.code }).first();
+    if (!existing) {
+      await db('list_sources').insert({
+        code: src.code, slug: src.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: src.name, list_type: src.list_type, country: src.country, region: src.region,
+        tier: src.tier, origin: 'official', adapter: src.adapter, source_url: src.source_url,
+        refresh_hours: src.refresh_hours, enabled: true, entry_count: 0,
+      });
+      console.log(`[list-seed] inserted ${src.code} — ${src.name}`);
+    } else {
+      // Update adapter and URL in case they changed between deployments
+      await db('list_sources').where({ code: src.code }).update({ adapter: src.adapter, source_url: src.source_url, refresh_hours: src.refresh_hours, enabled: true });
+    }
+  }
+}
+
+/**
+ * Run one refresh cycle: sync every enabled source that is overdue.
+ * "Overdue" = last_synced_at is null OR older than refresh_hours.
+ * Returns a summary of what was synced.
+ */
+export async function runScheduledRefresh() {
+  const sources = await db('list_sources').where({ enabled: true });
+  const now = Date.now();
+  const due = sources.filter(s => {
+    if (!s.last_synced_at) return true;
+    const age = (now - new Date(s.last_synced_at).getTime()) / (1000 * 3600);
+    return age >= (s.refresh_hours || 24);
+  });
+  if (due.length === 0) return { checked: sources.length, synced: 0, results: [] };
+  const results = [];
+  for (const s of due) {
+    try {
+      const r = await syncSource({ ...s, fixture: FIXTURE_MAP[s.code] });
+      results.push(r);
+      if (r.status === 'ok') console.log(`[list-refresh] ${s.code} (${s.name}) — ${r.entries} entries`);
+      else console.warn(`[list-refresh] ${s.code} (${s.name}) — ${r.status}: ${r.error || r.reason || ''}`);
+    } catch (e) {
+      console.error(`[list-refresh] ${s.code} (${s.name}) failed:`, e.message);
+      results.push({ code: s.code, status: 'error', error: e.message });
+    }
+  }
+  return { checked: sources.length, synced: results.filter(r => r.status === 'ok').length, results };
+}
