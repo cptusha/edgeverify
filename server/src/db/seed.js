@@ -9,6 +9,8 @@ import { normalizeName } from '../engine/normalize.js';
 import { FIXTURES } from '../fixtures/index.js';
 import { registerFixtures, syncSource } from '../modules/lists.js';
 import { hashKey } from '../middleware/auth.js';
+import crypto from 'node:crypto';
+import { isHosted } from '../config.js';
 
 await up(db);
 registerFixtures(FIXTURES);
@@ -38,14 +40,18 @@ if (crRows.length > 0) await db('country_risk').insert(crRows);
 
 // 3. Demo tenant, users, API key, rules
 const tenantId = 'tnt_demo_bank';
+// Local standalone mode keeps the documented demo password and key. In hosted mode (Postgres / production)
+// fresh random credentials are generated and printed once, so the public demo values never work on a live server.
+const demoPassword = process.env.SEED_DEMO_PASSWORD || (isHosted ? crypto.randomBytes(12).toString('base64url') : 'EdgeVerify!2026');
+const demoApiKey = isHosted ? `ev_live_${crypto.randomBytes(18).toString('base64url')}` : 'ev_live_DEMO_KEY_change_me';
 if (!(await db('tenants').where({ id: tenantId }).first())) {
   await db('tenants').insert({ id: tenantId, name: 'Demo Bank Nigeria PLC', plan: 'enterprise', settings: JSON.stringify({ base_currency: 'USD', screening_threshold: 80, core_banking: 'finacle', jurisdiction: 'NG', regulator: 'CBN / NFIU' }) });
   const users = [['admin@demobank.ng', 'Prusha (Admin)', 'tenant_admin'], ['mlro@demobank.ng', 'Funke Adeyemi (MLRO)', 'compliance_officer'], ['analyst@demobank.ng', 'Tobi Okon (Analyst)', 'analyst'], ['auditor@demobank.ng', 'Internal Audit', 'auditor']];
-  for (const [email, name, role] of users) await db('users').insert({ id: uuid(), tenant_id: tenantId, email, name, role, password_hash: await bcrypt.hash('EdgeVerify!2026', 10) });
-  await db('users').insert({ id: uuid(), tenant_id: null, email: 'root@edgeverify.io', name: 'Platform Operator', role: 'super_admin', password_hash: await bcrypt.hash('EdgeVerify!2026', 10) });
-  await db('api_keys').insert({ id: uuid(), tenant_id: tenantId, label: 'Finacle integration (demo)', key_hash: hashKey('ev_live_DEMO_KEY_change_me'), prefix: 'ev_live_DEMO', scopes: JSON.stringify(['screen', 'transactions', 'customers']) });
+  for (const [email, name, role] of users) await db('users').insert({ id: uuid(), tenant_id: tenantId, email, name, role, password_hash: await bcrypt.hash(demoPassword, 10) });
+  await db('users').insert({ id: uuid(), tenant_id: null, email: 'root@edgeverify.io', name: 'Platform Operator', role: 'super_admin', password_hash: await bcrypt.hash(demoPassword, 10) });
+  await db('api_keys').insert({ id: uuid(), tenant_id: tenantId, label: 'Finacle integration (demo)', key_hash: hashKey(demoApiKey), prefix: demoApiKey.slice(0, 12), scopes: JSON.stringify(['screen', 'transactions', 'customers']) });
   for (const r of expandBuiltins()) await db('rules').insert({ id: uuid(), tenant_id: tenantId, code: r.code, name: r.name, description: r.description, category: r.category, severity: r.severity, action: r.action, definition: JSON.stringify(r.definition), enabled: true, created_by: 'system' });
-  console.log('demo tenant created: users admin@/mlro@/analyst@/auditor@demobank.ng, root@edgeverify.io — password EdgeVerify!2026; API key ev_live_DEMO_KEY_change_me');
+  console.log(`demo tenant created: users admin@/mlro@/analyst@/auditor@demobank.ng, root@edgeverify.io; password ${demoPassword}; API key ${demoApiKey}${isHosted ? '  (save these now, they are not stored anywhere)' : ''}`);
 }
 
 // 4. Load fixture lists

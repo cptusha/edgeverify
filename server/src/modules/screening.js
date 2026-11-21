@@ -29,7 +29,7 @@ export async function runScreening(tenant_id, input, actorId) {
   // Candidate prefilter in SQL (token prefixes), then in-memory scoring.
   const tk = tokens(input.name).map(t => t.slice(0, 4)).filter(t => t.length >= 3);
   let q = db('list_entries').whereIn('source_code', codes).whereNull('delisted_on');
-  if (tk.length) q = q.where(b => { for (const p of tk) b.orWhere('name_normalized', 'like', `%${p}%`).orWhere('aliases_normalized', 'like', `%${p}%`); });
+  if (tk.length) q = q.where(b => { for (const p of tk) b.orWhere('name_normalized', 'like', `%${p}%`).orWhereRaw('CAST(aliases_normalized AS TEXT) LIKE ?', [`%${p}%`]); });
   const rows = await q.limit(5000);
   const filt = candidateFilter(input.name);
   const matches = [];

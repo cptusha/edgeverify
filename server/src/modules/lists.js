@@ -87,7 +87,7 @@ listsRouter.post('/sync-all', requireRole('super_admin', 'tenant_admin'), async 
 listsRouter.get('/entries', async (req, res) => {
   const { q, source_code, entity_type, list_type, limit = 50 } = req.query;
   let x = db('list_entries as e').join('list_sources as s', 's.code', 'e.source_code').select('e.*', 's.name as list_name', 's.list_type', 's.country as list_country');
-  if (q) { const nq = normalizeName(String(q)); x = x.where(b => b.where('e.name_normalized', 'like', `%${nq}%`).orWhere('e.aliases_normalized', 'like', `%${nq}%`)); }
+  if (q) { const nq = normalizeName(String(q)); x = x.where(b => b.where('e.name_normalized', 'like', `%${nq}%`).orWhereRaw('CAST(e.aliases_normalized AS TEXT) LIKE ?', [`%${nq}%`])); }
   if (source_code) x = x.where('e.source_code', source_code); if (entity_type) x = x.where('e.entity_type', entity_type); if (list_type) x = x.where('s.list_type', list_type);
   const rows = await x.limit(Number(limit));
   res.json(rows.map(r => ({ ...r, aliases: j(r.aliases), dobs: j(r.dobs), nationalities: j(r.nationalities), countries: j(r.countries), identifiers: j(r.identifiers), addresses: j(r.addresses), programs: j(r.programs), raw: undefined, aliases_normalized: undefined, phonetic_keys: undefined })));

@@ -1,4 +1,6 @@
 import express from 'express';
+// Express 4 does not catch errors thrown in async route handlers. This patches it so they reach the error handler below.
+import 'express-async-errors';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -48,12 +50,25 @@ if (fs.existsSync(dist)) { app.use(express.static(dist)); app.get(/^(?!\/v1|\/he
 
 app.use((err, req, res, next) => {
   if (err?.name === 'ZodError') return res.status(422).json({ error: 'Validation failed', issues: err.issues });
-  console.error(err); res.status(err.status || 500).json({ error: err.message || 'Internal error' });
+  console.error(err); const status = err.status || err.statusCode || 500; res.status(status).json({ error: status >= 500 ? 'Internal error' : (err.message || 'Request failed') });
 });
 
+// Last-resort logging. A failed promise is logged and the server keeps running.
+// A truly uncaught exception leaves the process in an unknown state, so log it and exit; Render restarts the service.
+process.on('unhandledRejection', (err) => { console.error('[unhandledRejection]', err); });
+process.on('uncaughtException', (err) => { console.error('[uncaughtException]', err); process.exit(1); });
+
 registerFixtures(FIXTURES);
-// Scheduled list refresh
-setInterval(async () => { const srcs = await db('list_sources').where({ enabled: true }); for (const s of srcs) await syncSource({ ...s, fixture: FIXTURE_MAP[s.code] }); }, config.listRefreshMinutes * 60_000).unref();
+// Scheduled list refresh. One failing source must not stop the others or crash the server.
+setInterval(async () => {
+  try {
+    const srcs = await db('list_sources').where({ enabled: true });
+    for (const s of srcs) {
+      try { await syncSource({ ...s, fixture: FIXTURE_MAP[s.code] }); }
+      catch (e) { console.error(`[list-refresh] ${s.code} failed:`, e.message); }
+    }
+  } catch (e) { console.error('[list-refresh] failed:', e.message); }
+}, config.listRefreshMinutes * 60_000).unref();
 
 app.listen(config.port, () => {
   console.log(`EdgeVerify API on :${config.port} (${config.databaseUrl ? 'postgres' : 'standalone sqlite'})`);

@@ -27,8 +27,10 @@ cd ../client && npm install && npm run build
 cd ../server && npm start    # http://localhost:4000  (console + API in one process)
 ```
 
-Demo logins (password `EdgeVerify!2026`): `analyst@demobank.ng`, `mlro@demobank.ng` (compliance officer), `admin@demobank.ng`, `auditor@demobank.ng`, `root@edgeverify.io` (platform operator).
+Demo logins for **local standalone mode only** (password `EdgeVerify!2026`): `analyst@demobank.ng`, `mlro@demobank.ng` (compliance officer), `admin@demobank.ng`, `auditor@demobank.ng`, `root@edgeverify.io` (platform operator).
 Demo API key: `ev_live_DEMO_KEY_change_me`.
+
+In hosted mode (Postgres or `NODE_ENV=production`) the seed generates random credentials and prints them once, and the server will not start without a `JWT_SECRET` of at least 32 characters. If a live database was seeded before this change, run `npm run lockdown-demo` against it.
 
 Try it: screen **Dimitri Arkadiev** (1968, RU); simulate a wire to **Al Hassan Trading Company** with destination IR; write a rule and test it against history.
 
