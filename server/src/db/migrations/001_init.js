@@ -122,4 +122,37 @@ export async function up(db) {
   // Add 'active' column to tenants if it doesn't exist (idempotent column add)
   const hasActivCol = await db.schema.hasColumn('tenants', 'active');
   if (!hasActivCol) await db.schema.table('tenants', t => { t.boolean('active').defaultTo(true); });
+
+  // Webhook delivery queue — persistent, retryable, auditable
+  if (!(await has('webhook_deliveries'))) await db.schema.createTable('webhook_deliveries', t => {
+    t.string('id').primary();
+    t.string('webhook_id').index().references('id').inTable('webhooks').onDelete('CASCADE');
+    t.string('tenant_id').index();
+    t.string('event').index();
+    t.text('payload'); // JSON body sent
+    t.string('status').defaultTo('pending').index(); // pending | delivered | failed | dead
+    t.integer('attempts').defaultTo(0);
+    t.timestamp('next_attempt_at').index();
+    t.timestamp('delivered_at');
+    t.integer('last_http_status');
+    t.text('last_error');
+    t.timestamps(true, true);
+  });
+
+  // Password reset tokens — single-use, 1-hour expiry
+  if (!(await has('password_reset_tokens'))) await db.schema.createTable('password_reset_tokens', t => {
+    t.string('id').primary(); // the token itself (random hex)
+    t.string('user_id').notNullable().index();
+    t.timestamp('expires_at').notNullable();
+    t.boolean('used').defaultTo(false);
+    t.timestamps(true, true);
+  });
+
+  // Sandbox mode flag on tenants (idempotent)
+  const hasSandbox = await db.schema.hasColumn('tenants', 'sandbox');
+  if (!hasSandbox) await db.schema.table('tenants', t => { t.boolean('sandbox').defaultTo(false); });
+
+  // Notes field on tenants for operator use (idempotent)
+  const hasNotes = await db.schema.hasColumn('tenants', 'notes');
+  if (!hasNotes) await db.schema.table('tenants', t => { t.text('notes'); });
 }

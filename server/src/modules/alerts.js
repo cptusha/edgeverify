@@ -4,6 +4,7 @@ import { db, j } from '../db/knex.js';
 import { audit } from '../middleware/audit.js';
 import { requireRole } from '../middleware/auth.js';
 import { dispatchWebhook } from './webhooks.js';
+import { sendAlertNotification, sendCaseAssignment } from '../services/email.js';
 
 const SLA_HOURS = { critical: 4, high: 24, medium: 72, low: 168 };
 
@@ -11,6 +12,13 @@ export async function emitAlert(tenant_id, a) {
   const row = { id: uuid(), tenant_id, status: 'open', sla_due_at: new Date(Date.now() + (SLA_HOURS[a.severity] || 72) * 3600e3).toISOString(), ...a, evidence: JSON.stringify(a.evidence || {}) };
   await db('alerts').insert(row);
   dispatchWebhook(tenant_id, 'alert.created', { ...row, evidence: a.evidence }).catch(() => {});
+  // Email tenant_admin and compliance_officer users on critical/high alerts
+  if (['critical', 'high'].includes(a.severity)) {
+    const recipients = await db('users').where({ tenant_id, active: true }).whereIn('role', ['tenant_admin', 'compliance_officer', 'mlro']);
+    for (const u of recipients) {
+      sendAlertNotification({ to: u.email, name: u.name, alert: a }).catch(() => {});
+    }
+  }
   return row;
 }
 
@@ -67,6 +75,12 @@ casesRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'analyst
       alert_ids: JSON.stringify(alert_ids), timeline: JSON.stringify([{ at: new Date().toISOString(), by: req.actor.id, event: 'Case opened' }]) };
     await db('cases').insert(row);
     if (alert_ids.length) await db('alerts').whereIn('id', alert_ids).update({ case_id: row.id, status: 'investigating' });
+    dispatchWebhook(req.actor.tenant_id, 'case.created', row).catch(() => {});
+    // Notify the assigned owner
+    if (row.owner_id) {
+      const owner = await db('users').where({ id: row.owner_id }).first();
+      if (owner) sendCaseAssignment({ to: owner.email, name: owner.name, caseRef: row.reference, caseTitle: row.title }).catch(() => {});
+    }
     res.status(201).json(row);
   } catch (e) { next(e); }
 });

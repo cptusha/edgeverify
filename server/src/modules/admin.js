@@ -7,6 +7,7 @@ import { requireRole, ROLES, hashKey, issueToken } from '../middleware/auth.js';
 import { audit, verifyChain } from '../middleware/audit.js';
 import { expandBuiltins } from '../engine/rules.js';
 import { DEFAULT_RISK_CONFIG } from '../engine/risk.js';
+import { sendPasswordReset } from '../services/email.js';
 
 export const authRouter = Router();
 authRouter.post('/login', async (req, res) => {
@@ -18,6 +19,44 @@ authRouter.post('/login', async (req, res) => {
 });
 authRouter.get('/me', (req, res) => res.json(req.actor));
 authRouter.get('/roles', (req, res) => res.json(ROLES));
+
+// Password reset — request (unauthenticated)
+authRouter.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  // Always return 200 to prevent user enumeration
+  res.json({ ok: true, message: 'If that email is registered, a reset link has been sent.' });
+  if (!email) return;
+  const user = await db('users').where({ email: email.toLowerCase().trim() }).first();
+  if (!user || !user.active) return;
+  const token = crypto.randomBytes(32).toString('hex');
+  await db('password_reset_tokens').insert({ id: token, user_id: user.id, expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() });
+  await sendPasswordReset({ to: user.email, name: user.name, token }).catch(e => console.error('[email] forgot-password:', e.message));
+});
+
+// Password reset — confirm (unauthenticated)
+authRouter.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password || password.length < 8) return res.status(400).json({ error: 'token and password (min 8 chars) are required' });
+  const row = await db('password_reset_tokens').where({ id: token, used: false }).first();
+  if (!row) return res.status(400).json({ error: 'Invalid or expired reset link' });
+  if (new Date(row.expires_at) < new Date()) return res.status(400).json({ error: 'Reset link has expired. Please request a new one.' });
+  const hash = await bcrypt.hash(password, 10);
+  await db.transaction(async trx => {
+    await trx('users').where({ id: row.user_id }).update({ password_hash: hash });
+    await trx('password_reset_tokens').where({ id: token }).update({ used: true });
+  });
+  res.json({ ok: true, message: 'Password updated. You can now sign in.' });
+});
+
+// Change own password (authenticated)
+authRouter.post('/change-password', async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password || new_password.length < 8) return res.status(400).json({ error: 'current_password and new_password (min 8 chars) are required' });
+  const user = await db('users').where({ id: req.actor.id }).first();
+  if (!user || !(await bcrypt.compare(current_password, user.password_hash))) return res.status(401).json({ error: 'Current password is incorrect' });
+  await db('users').where({ id: user.id }).update({ password_hash: await bcrypt.hash(new_password, 10) });
+  res.json({ ok: true });
+});
 
 // Self-service signup — creates a new tenant + first admin user
 authRouter.post('/signup', async (req, res, next) => {
@@ -124,12 +163,8 @@ adminRouter.put('/risk-config', requireRole('tenant_admin', 'compliance_officer'
 });
 adminRouter.get('/country-risk', async (req, res) => res.json(await db('country_risk').orderBy('score', 'desc')));
 adminRouter.put('/country-risk/:iso2', requireRole('tenant_admin', 'compliance_officer'), async (req, res) => { await db('country_risk').where({ iso2: req.params.iso2 }).update(req.body); res.json({ iso2: req.params.iso2, ...req.body }); });
-// Webhooks
-adminRouter.get('/webhooks', requireRole('tenant_admin'), async (req, res) => res.json((await db('webhooks').where({ tenant_id: req.actor.tenant_id })).map(w => ({ ...w, events: j(w.events), secret: undefined }))));
-adminRouter.post('/webhooks', requireRole('tenant_admin'), async (req, res) => {
-  const row = { id: uuid(), tenant_id: req.actor.tenant_id, url: req.body.url, events: JSON.stringify(req.body.events || ['*']), secret: crypto.randomBytes(16).toString('hex') };
-  await db('webhooks').insert(row); res.status(201).json({ ...row, events: req.body.events || ['*'] });
-});
+// Webhooks — full CRUD now lives in webhookAdminRouter (see index.js)
+// Legacy stubs kept for backwards compat; new clients use /v1/admin/webhooks/*
 // Audit log (auditor + admin)
 adminRouter.get('/audit', requireRole('tenant_admin', 'auditor', 'compliance_officer'), async (req, res) => {
   const { action, actor_id, resource_type, limit = 200 } = req.query;

@@ -16,6 +16,8 @@ import Admin from './pages/Admin.jsx';
 import StrReports, { StrReportDetail } from './pages/StrReports.jsx';
 import CountryRisk from './pages/CountryRisk.jsx';
 import Operator from './pages/Operator.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 const NAV = [
   { s: 'Monitor' }, { to: '/', l: 'Overview' }, { to: '/alerts', l: 'Alerts & cases' }, { to: '/transactions', l: 'Transactions' },
@@ -35,6 +37,8 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Landing />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -51,6 +55,8 @@ export default function App() {
         <Route path="/" element={<Overview />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/signup" element={<Navigate to="/" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/" replace />} />
+        <Route path="/reset-password" element={<Navigate to="/" replace />} />
         <Route path="/screen" element={<Screening />} /><Route path="/customers" element={<Customers />} /><Route path="/customers/:id" element={<CustomerDetail />} />
         <Route path="/transactions" element={<Transactions />} /><Route path="/alerts" element={<Alerts />} /><Route path="/alerts/:id" element={<AlertDetail />} />
         <Route path="/rules" element={<Rules />} /><Route path="/lists" element={<Lists />} /><Route path="/audit" element={<Audit />} /><Route path="/admin" element={<Admin />} />

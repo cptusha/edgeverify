@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { db, j } from '../db/knex.js';
 import { requireRole } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
+import { dispatchWebhook } from './webhooks.js';
+import { sendStrConfirmation } from '../services/email.js';
 
 export const strRouter = Router();
 
@@ -103,6 +105,9 @@ strRouter.patch('/:id', requireRole('compliance_officer', 'tenant_admin', 'super
     if (!row.grounds_for_suspicion) return res.status(400).json({ error: 'grounds_for_suspicion is required before filing.' });
     updates.filed_at = new Date().toISOString();
     updates.filed_by = req.actor.id;
+    // Webhook + email on filing
+    dispatchWebhook(req.actor.tenant_id, 'str.submitted', { id: row.id, reference: row.reference, filed_with: updates.filed_with || row.filed_with }).catch(() => {});
+    sendStrConfirmation({ to: req.actor.email, name: req.actor.name, ref: row.reference, filedWith: updates.filed_with || row.filed_with || 'regulator' }).catch(() => {});
   }
   updates.updated_at = new Date().toISOString();
   if (req.body.alert_ids !== undefined) updates.alert_ids = JSON.stringify(req.body.alert_ids);

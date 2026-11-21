@@ -18,6 +18,7 @@ import { dashboardsRouter } from './modules/dashboards.js';
 import { strRouter } from './modules/str.js';
 import { countryRiskRouter } from './modules/country_risk.js';
 import { operatorRouter } from './modules/operator.js';
+import { webhookAdminRouter, processWebhookQueue } from './modules/webhooks.js';
 import { FIXTURES } from './fixtures/index.js';
 
 const app = express();
@@ -28,7 +29,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(rateLimit({ windowMs: 60_000, limit: 600, standardHeaders: true, legacyHeaders: false }));
 
 app.get('/health', async (req, res) => { try { await db.raw('select 1'); res.json({ ok: true, service: 'edgeverify', version: '0.1.0', mode: config.databaseUrl ? 'postgres' : 'standalone-sqlite' }); } catch (e) { res.status(503).json({ ok: false }); } });
-const PUBLIC_AUTH = ['/login', '/signup'];
+const PUBLIC_AUTH = ['/login', '/signup', '/forgot-password', '/reset-password'];
 app.use('/v1/auth', (req, res, next) => (PUBLIC_AUTH.includes(req.path) ? next() : authenticate(req, res, next)), authRouter);
 
 const v1 = express.Router();
@@ -44,6 +45,7 @@ v1.use('/admin', adminRouter);
 v1.use('/str-reports', strRouter);
 v1.use('/country-risk', countryRiskRouter);
 v1.use('/operator', operatorRouter);
+v1.use('/admin/webhooks', webhookAdminRouter);
 app.use('/v1', v1);
 
 // Standalone mode: serve the built console from the same process (client/dist). API-only deployments just don't ship the dist folder.
@@ -78,6 +80,12 @@ setInterval(async () => {
     if (r.synced > 0) console.log(`[list-refresh] scheduled: ${r.synced}/${r.checked} sources refreshed`);
   } catch (e) { console.error('[list-refresh] scheduled run failed:', e.message); }
 }, 30 * 60_000).unref();
+
+// Webhook delivery queue — process pending/retrying deliveries every 60 seconds
+setInterval(async () => {
+  try { await processWebhookQueue(); }
+  catch (e) { console.error('[webhooks] queue run failed:', e.message); }
+}, 60_000).unref();
 
 app.listen(config.port, () => {
   console.log(`EdgeVerify API on :${config.port} (${config.databaseUrl ? 'postgres' : 'standalone sqlite'})`);

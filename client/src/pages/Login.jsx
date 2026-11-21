@@ -14,7 +14,9 @@ export default function Login() {
     <Err e={err} />
     <div className="form"><div><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} autoFocus /></div><div><label>Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
       <button className="primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-      <p className="small" style={{ textAlign: 'center', margin: '4px 0 0', color: 'var(--ink-3)' }}>Don't have an account? <Link to="/">See pricing and sign up</Link></p>
+      <p className="small" style={{ textAlign: 'center', margin: '4px 0 0', color: 'var(--ink-3)' }}>
+        <Link to="/forgot-password">Forgot password?</Link> · Don't have an account? <Link to="/">See pricing and sign up</Link>
+      </p>
     </div>
       </form></div>;
 }
