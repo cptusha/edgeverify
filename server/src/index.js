@@ -25,7 +25,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(rateLimit({ windowMs: 60_000, limit: 600, standardHeaders: true, legacyHeaders: false }));
 
 app.get('/health', async (req, res) => { try { await db.raw('select 1'); res.json({ ok: true, service: 'edgeverify', version: '0.1.0', mode: config.databaseUrl ? 'postgres' : 'standalone-sqlite' }); } catch (e) { res.status(503).json({ ok: false }); } });
-app.use('/v1/auth', (req, res, next) => (req.path === '/login' ? next() : authenticate(req, res, next)), authRouter);
+const PUBLIC_AUTH = ['/login', '/signup'];
+app.use('/v1/auth', (req, res, next) => (PUBLIC_AUTH.includes(req.path) ? next() : authenticate(req, res, next)), authRouter);
 
 const v1 = express.Router();
 v1.use(authenticate, auditMiddleware);

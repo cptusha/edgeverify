@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { session } from './api.js';
+import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Overview from './pages/Overview.jsx';
 import Screening from './pages/Screening.jsx';
@@ -25,16 +26,29 @@ const NAV = [
 
 export default function App() {
   const s = session.get(); const nav = useNavigate();
-  if (!s) return <Routes><Route path="*" element={<Login />} /></Routes>;
+
+  // Public routes — always visible regardless of auth state
+  if (!s) return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Landing />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+
+  // Authenticated shell
   return <div className="shell">
     <nav className="nav">
       <div className="brand"><span className="mark" />EdgeVerify</div>
-      {NAV.map((n, i) => n.s ? <div className="section" key={i}>{n.s}</div> : (!n.roles || n.roles.includes(s.user.role)) && <NavLink key={n.to} to={n.to} end={n.to === '/'}>{n.l}</NavLink>)}
-      <div className="user"><b>{s.user.name}</b>{s.user.role.replace(/_/g, ' ')} · {s.user.email}<button onClick={() => { session.clear(); nav('/login'); location.reload(); }}>Sign out</button></div>
+      {NAV.map((n, i) => n.s ? <div className="section" key={i}>{n.s}</div> : (!n.roles || n.roles.includes(s.user.role)) && <NavLink key={n.to} to={n.to} end={n.to === '/app'}>{n.l}</NavLink>)}
+      <div className="user"><b>{s.user.name}</b>{s.user.role.replace(/_/g, ' ')} · {s.user.email}<button onClick={() => { session.clear(); nav('/'); location.reload(); }}>Sign out</button></div>
     </nav>
     <main className="main">
       <Routes>
-        <Route path="/" element={<Overview />} /><Route path="/login" element={<Navigate to="/" />} />
+        <Route path="/" element={<Overview />} />
+        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/signup" element={<Navigate to="/" replace />} />
         <Route path="/screen" element={<Screening />} /><Route path="/customers" element={<Customers />} /><Route path="/customers/:id" element={<CustomerDetail />} />
         <Route path="/transactions" element={<Transactions />} /><Route path="/alerts" element={<Alerts />} /><Route path="/alerts/:id" element={<AlertDetail />} />
         <Route path="/rules" element={<Rules />} /><Route path="/lists" element={<Lists />} /><Route path="/audit" element={<Audit />} /><Route path="/admin" element={<Admin />} />

@@ -19,6 +19,46 @@ authRouter.post('/login', async (req, res) => {
 authRouter.get('/me', (req, res) => res.json(req.actor));
 authRouter.get('/roles', (req, res) => res.json(ROLES));
 
+// Self-service signup — creates a new tenant + first admin user
+authRouter.post('/signup', async (req, res, next) => {
+  try {
+    const { org_name, org_email, phone, plan, name, email, password } = req.body;
+    if (!org_name || !org_email || !name || !email || !password) return res.status(400).json({ error: 'org_name, org_email, name, email and password are all required.' });
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    const VALID_PLANS = ['startup', 'growth', 'enterprise'];
+    const chosenPlan = VALID_PLANS.includes(plan) ? plan : 'growth';
+
+    // Check no existing user with this email across any tenant
+    const existing = await db('users').where({ email }).first();
+    if (existing) return res.status(409).json({ error: 'An account with this email address already exists.' });
+
+    const tenantId = uuid();
+    const userId = uuid();
+    const hash = await bcrypt.hash(password, 10);
+
+    await db.transaction(async trx => {
+      await trx('tenants').insert({
+        id: tenantId,
+        name: org_name,
+        plan: chosenPlan,
+        settings: JSON.stringify({ org_email, phone: phone || null }),
+      });
+      await trx('users').insert({
+        id: userId,
+        tenant_id: tenantId,
+        email,
+        name,
+        role: 'tenant_admin',
+        password_hash: hash,
+        active: true,
+      });
+    });
+
+    res.status(201).json({ message: 'Account created. You can now sign in.', tenant_id: tenantId });
+  } catch (e) { next(e); }
+});
+
 export const adminRouter = Router();
 // Users
 adminRouter.get('/users', requireRole('tenant_admin', 'auditor'), async (req, res) => res.json(await db('users').where({ tenant_id: req.actor.tenant_id }).select('id', 'email', 'name', 'role', 'active', 'created_at')));
