@@ -7,6 +7,7 @@ import { normalizeName, tokens } from '../engine/normalize.js';
 import { audit } from '../middleware/audit.js';
 import { requireRole } from '../middleware/auth.js';
 import { emitAlert } from './alerts.js';
+import { increment, requireUnderLimit } from '../services/usage.js';
 
 export const screeningRouter = Router();
 
@@ -47,6 +48,7 @@ export async function runScreening(tenant_id, input, actorId) {
   const screening = { id: uuid(), tenant_id, customer_id: input.customer_id || null, context: input.context, query_name: input.name, query: JSON.stringify(input),
     match_count: matches.length, top_score: topScore, outcome, matches: JSON.stringify(top), lists_screened: codes.length, duration_ms: Date.now() - started, requested_by: actorId };
   await db('screenings').insert(screening);
+  increment(tenant_id, 'screens').catch(() => {});
   if (input.customer_id) await db('customers').where({ id: input.customer_id, tenant_id }).update({ last_screened_at: db.fn.now() });
   if (outcome !== 'clear') {
     const sev = outcome === 'confirmed_match' ? 'critical' : topScore >= 88 ? 'high' : 'medium';
@@ -57,7 +59,7 @@ export async function runScreening(tenant_id, input, actorId) {
   return { ...screening, query: input, matches: top };
 }
 
-screeningRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'analyst', 'api_client'), async (req, res, next) => {
+screeningRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'analyst', 'api_client'), requireUnderLimit('screens'), async (req, res, next) => {
   try {
     const input = ScreenBody.parse(req.body);
     const result = await runScreening(req.actor.tenant_id, input, req.actor.id);

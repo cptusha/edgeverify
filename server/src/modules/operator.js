@@ -67,12 +67,13 @@ operatorRouter.get('/tenants/:id', async (req, res) => {
 operatorRouter.patch('/tenants/:id', async (req, res) => {
   const t = await db('tenants').where({ id: req.params.id }).first();
   if (!t) return res.status(404).json({ error: 'Tenant not found' });
-  const { name, plan, active, notes } = req.body;
+  const { name, plan, active, sandbox, notes } = req.body;
   const VALID_PLANS = ['startup', 'growth', 'enterprise', 'custom'];
   const patch = {};
   if (name) patch.name = name;
   if (plan && VALID_PLANS.includes(plan)) patch.plan = plan;
   if (active !== undefined) patch.active = Boolean(active);
+  if (sandbox !== undefined) patch.sandbox = Boolean(sandbox);
   if (notes !== undefined) {
     const existing = j(t.settings) || {};
     patch.settings = JSON.stringify({ ...existing, operator_notes: notes });

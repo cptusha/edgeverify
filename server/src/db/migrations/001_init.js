@@ -163,6 +163,16 @@ export async function up(db) {
     t.boolean('totp_enabled').defaultTo(false);
   });
 
+  // Usage metering — monthly counters per tenant per metric
+  if (!(await has('usage_counters'))) await db.schema.createTable('usage_counters', t => {
+    t.increments('id');
+    t.string('tenant_id').notNullable().index();
+    t.string('metric').notNullable();   // screens | transactions | api_calls | cases | ...
+    t.string('period').notNullable();   // YYYY-MM
+    t.bigInteger('count').defaultTo(0);
+    t.unique(['tenant_id', 'metric', 'period']);
+  });
+
   // User sessions — track logins for session management and revocation
   if (!(await has('user_sessions'))) await db.schema.createTable('user_sessions', t => {
     t.string('id').primary();          // session id embedded in JWT jti claim

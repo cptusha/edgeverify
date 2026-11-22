@@ -97,7 +97,7 @@ function TenantDrawer({ tenantId, onClose }) {
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'analyst', password: '' });
 
   useEffect(() => {
-    if (data) setF({ name: data.name, plan: data.plan, notes: data.settings?.operator_notes || '' });
+    if (data) setF({ name: data.name, plan: data.plan, sandbox: !!data.sandbox, notes: data.settings?.operator_notes || '' });
   }, [data]);
 
   const save = async () => {
@@ -181,6 +181,12 @@ function TenantDrawer({ tenantId, onClose }) {
                     {['startup', 'growth', 'enterprise', 'custom'].map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={!!f.sandbox} onChange={e => setF({ ...f, sandbox: e.target.checked })} />
+                    Sandbox mode (limits bypassed, usage not counted)
+                  </label>
+                </div>
                 <div><label>Operator notes (internal)</label>
                   <textarea rows={3} value={f.notes || ''} onChange={e => setF({ ...f, notes: e.target.value })} placeholder="Internal notes visible only to SETS operators" />
                 </div>
@@ -193,6 +199,7 @@ function TenantDrawer({ tenantId, onClose }) {
                   ['Organisation email', settings.org_email || '—'],
                   ['Phone', settings.phone || '—'],
                   ['Joined', fmt.d(data.created_at)],
+                  ['Sandbox', data.sandbox ? <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>SANDBOX</span> : <span className="muted">No</span>],
                   ['Operator notes', settings.operator_notes || <span className="muted">None</span>],
                 ].map(([k, v]) => <tr key={k}><td className="muted" style={{ width: 160, verticalAlign: 'top' }}>{k}</td><td>{v}</td></tr>)}
               </tbody></table>}

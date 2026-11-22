@@ -8,6 +8,7 @@ import { runScreening } from './screening.js';
 import { emitAlert } from './alerts.js';
 import { countryRiskMap } from './customers.js';
 import { requireRole } from '../middleware/auth.js';
+import { increment, requireUnderLimit } from '../services/usage.js';
 import { normalizeName } from '../engine/normalize.js';
 
 export const transactionsRouter = Router();
@@ -54,6 +55,7 @@ export async function monitorTransaction(tenant_id, input, actorId) {
   tx.status = ev.status; tx.rule_hits = JSON.stringify(ev.hits); tx.risk_score = ev.score; tx.latency_ms = Date.now() - started;
   if (!input.dry_run) {
     await db('transactions').insert({ ...tx, raw: JSON.stringify(input) });
+    increment(tx.tenant_id, 'transactions').catch(() => {});
     if (ev.hits.length) {
       const worst = ev.hits.reduce((w, h) => ({ critical: 4, high: 3, medium: 2, low: 1 }[h.severity] > ({ critical: 4, high: 3, medium: 2, low: 1 }[w.severity] || 0) ? h : w), ev.hits[0]);
       await emitAlert(tenant_id, { alert_type: ev.hits.some(h => h.rule_code === 'SANCTIONS-COUNTERPARTY') ? 'screening' : (worst.severity && parsedRules.find(r => r.code === worst.rule_code)?.category === 'fraud' ? 'fraud' : 'transaction'),
@@ -66,7 +68,7 @@ export async function monitorTransaction(tenant_id, input, actorId) {
 }
 
 // Real-time endpoint (sub-100ms target). Core banking calls this synchronously before posting.
-transactionsRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'analyst', 'api_client'), async (req, res, next) => {
+transactionsRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'analyst', 'api_client'), requireUnderLimit('transactions'), async (req, res, next) => {
   try { res.json(await monitorTransaction(req.actor.tenant_id, Tx.parse(req.body), req.actor.id)); } catch (e) { next(e); }
 });
 // Ingest raw core-banking payload

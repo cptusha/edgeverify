@@ -11,6 +11,7 @@ import { sendPasswordReset } from '../services/email.js';
 import speakeasy from 'speakeasy';
 import qrcode from 'qrcode';
 import { createSession } from '../middleware/auth.js';
+import { getUsageSummary } from '../services/usage.js';
 
 export const authRouter = Router();
 authRouter.post('/login', async (req, res) => {
@@ -186,6 +187,7 @@ adminRouter.get('/audit', requireRole('tenant_admin', 'auditor', 'compliance_off
 adminRouter.get('/audit/verify', requireRole('tenant_admin', 'auditor'), async (req, res) => res.json(await verifyChain(req.actor.tenant_id)));
 adminRouter.get('/tenant', async (req, res) => { const t = await db('tenants').where({ id: req.actor.tenant_id }).first(); res.json({ ...t, settings: j(t.settings), risk_config: j(t.risk_config) }); });
 adminRouter.put('/tenant/settings', requireRole('tenant_admin'), async (req, res) => { await db('tenants').where({ id: req.actor.tenant_id }).update({ settings: JSON.stringify(req.body) }); res.json(req.body); });
+adminRouter.get('/usage', async (req, res) => res.json(await getUsageSummary(req.actor.tenant_id)));
 
 // ── 2FA (TOTP) ──────────────────────────────────────────────────────────────
 

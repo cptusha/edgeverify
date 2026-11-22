@@ -19,6 +19,7 @@ import { strRouter } from './modules/str.js';
 import { countryRiskRouter } from './modules/country_risk.js';
 import { operatorRouter } from './modules/operator.js';
 import { webhookAdminRouter, processWebhookQueue } from './modules/webhooks.js';
+import { increment } from './services/usage.js';
 import { FIXTURES } from './fixtures/index.js';
 
 const app = express();
@@ -33,7 +34,14 @@ const PUBLIC_AUTH = ['/login', '/signup', '/forgot-password', '/reset-password']
 app.use('/v1/auth', (req, res, next) => (PUBLIC_AUTH.includes(req.path) ? next() : authenticate(req, res, next)), authRouter);
 
 const v1 = express.Router();
-v1.use(authenticate, auditMiddleware);
+// authenticate → meter → audit → routes
+v1.use(authenticate, (req, res, next) => {
+  // API call metering — count every authenticated v1 request against the tenant's plan
+  if (req.actor?.tenant_id && req.actor.role !== 'super_admin') {
+    increment(req.actor.tenant_id, 'api_calls').catch(() => {});
+  }
+  next();
+}, auditMiddleware);
 v1.use('/screen', screeningRouter);
 v1.use('/customers', customersRouter);
 v1.use('/transactions', transactionsRouter);

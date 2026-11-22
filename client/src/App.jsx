@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
-import { session } from './api.js';
+import { session, api } from './api.js';
 import Landing from './pages/Landing.jsx';
 import Login from './pages/Login.jsx';
 import Overview from './pages/Overview.jsx';
@@ -43,10 +43,19 @@ export default function App() {
     </Routes>
   );
 
+  // Fetch sandbox status once per session
+  const [sandbox, setSandbox] = useState(false);
+  useEffect(() => {
+    api('/admin/tenant').then(t => { if (t?.sandbox) setSandbox(true); }).catch(() => {});
+  }, []);
+
   // Authenticated shell
   return <div className="shell">
     <nav className="nav">
-      <div className="brand"><span className="mark" />EdgeVerify</div>
+      <div className="brand">
+        <span className="mark" />EdgeVerify
+        {sandbox && <span style={{ marginLeft: 8, background: '#7c3aed', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 11, fontWeight: 700, letterSpacing: '.5px' }}>SANDBOX</span>}
+      </div>
       {NAV.map((n, i) => n.s ? ((!n.roles || n.roles.includes(s.user.role)) && <div className="section" key={i}>{n.s}</div>) : (!n.roles || n.roles.includes(s.user.role)) && <NavLink key={n.to} to={n.to} end={n.to === '/app'}>{n.l}</NavLink>)}
       <div className="user"><b>{s.user.name}</b>{s.user.role.replace(/_/g, ' ')} · {s.user.email}<button onClick={() => { session.clear(); nav('/'); location.reload(); }}>Sign out</button></div>
     </nav>

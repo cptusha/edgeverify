@@ -5,6 +5,7 @@ import { audit } from '../middleware/audit.js';
 import { requireRole } from '../middleware/auth.js';
 import { dispatchWebhook } from './webhooks.js';
 import { sendAlertNotification, sendCaseAssignment } from '../services/email.js';
+import { increment } from '../services/usage.js';
 
 const SLA_HOURS = { critical: 4, high: 24, medium: 72, low: 168 };
 
@@ -74,6 +75,7 @@ casesRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'analyst
     const row = { id: uuid(), tenant_id: req.actor.tenant_id, reference: `CASE-${new Date().getFullYear()}-${String(Number(count.c) + 1).padStart(5, '0')}`, title, priority, customer_id, owner_id: req.actor.id,
       alert_ids: JSON.stringify(alert_ids), timeline: JSON.stringify([{ at: new Date().toISOString(), by: req.actor.id, event: 'Case opened' }]) };
     await db('cases').insert(row);
+    increment(req.actor.tenant_id, 'cases').catch(() => {});
     if (alert_ids.length) await db('alerts').whereIn('id', alert_ids).update({ case_id: row.id, status: 'investigating' });
     dispatchWebhook(req.actor.tenant_id, 'case.created', row).catch(() => {});
     // Notify the assigned owner

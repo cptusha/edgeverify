@@ -132,6 +132,74 @@ function SecurityTab() {
   );
 }
 
+// ── Usage tab ────────────────────────────────────────────────────────────────
+
+const METRIC_LABELS = {
+  screens: 'Sanctions screens', transactions: 'Transactions', api_calls: 'API calls',
+  cases: 'Cases', users: 'Active users', customers: 'Customers',
+};
+
+function UsageBar({ used, limit }) {
+  const pct = limit === -1 ? 0 : Math.min(100, Math.round((used / limit) * 100));
+  const color = pct >= 90 ? 'var(--danger)' : pct >= 70 ? '#f59e0b' : 'var(--accent)';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1, background: 'var(--border)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 4, transition: 'width .3s' }} />
+      </div>
+      <span className="mono small" style={{ width: 90, textAlign: 'right', color }}>
+        {limit === -1 ? `${used.toLocaleString()} / ∞` : `${used.toLocaleString()} / ${limit.toLocaleString()}`}
+      </span>
+    </div>
+  );
+}
+
+function UsageTab() {
+  const usage = useFetch('/admin/usage');
+  const d = usage.data;
+  if (usage.loading) return <p className="muted small">Loading…</p>;
+  if (usage.error) return <Err e={usage.error} />;
+
+  const planLabel = { startup: 'Startup', growth: 'Growth', enterprise: 'Enterprise' }[d?.plan] || d?.plan;
+
+  return (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h2 style={{ marginBottom: 2 }}>Plan usage</h2>
+          <p className="small muted">Resets on the 1st of each month ({d?.period})</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: 20, padding: '3px 12px', fontWeight: 600, fontSize: 13 }}>{planLabel}</span>
+          {d?.sandbox && <span style={{ background: '#7c3aed', color: '#fff', borderRadius: 20, padding: '3px 12px', fontWeight: 600, fontSize: 13 }}>Sandbox</span>}
+        </div>
+      </div>
+      {d?.sandbox && <p className="small muted" style={{ marginBottom: 16 }}>Sandbox mode is active — usage is not counted and limits are not enforced.</p>}
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead><tr>
+          <th style={{ textAlign: 'left', paddingBottom: 8, fontWeight: 600, color: 'var(--muted)' }}>Metric</th>
+          <th style={{ width: '50%', paddingBottom: 8 }}></th>
+          <th style={{ textAlign: 'right', paddingBottom: 8, fontWeight: 600, color: 'var(--muted)' }}>Usage</th>
+        </tr></thead>
+        <tbody>
+          {Object.entries(d?.metrics || {}).map(([key, { used, limit }]) => (
+            <tr key={key} style={{ borderTop: '1px solid var(--border)' }}>
+              <td style={{ padding: '10px 12px 10px 0', fontWeight: 500 }}>{METRIC_LABELS[key] || key}</td>
+              <td style={{ padding: '10px 12px' }}><UsageBar used={used} limit={limit} /></td>
+              <td style={{ padding: '10px 0 10px 12px', textAlign: 'right' }} className="small muted">
+                {limit === -1 ? 'Unlimited' : `${Math.round((used/limit)*100)}%`}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="small muted" style={{ marginTop: 16 }}>
+        Need more capacity? <a href="mailto:sales@edgeverify.io" style={{ color: 'var(--accent)' }}>Contact sales</a> to upgrade your plan.
+      </p>
+    </div>
+  );
+}
+
 // ── Main Admin page ───────────────────────────────────────────────────────────
 
 export default function Admin() {
@@ -153,7 +221,7 @@ export default function Admin() {
       </div>
     </div>
     <div className="tabs" style={{ marginBottom: 20 }}>
-      {[['users', 'Users & roles'], ['integrations', 'Integrations'], ['security', 'Security']].map(([v, l]) => (
+      {[['users', 'Users & roles'], ['integrations', 'Integrations'], ['security', 'Security'], ['usage', 'Plan & usage']].map(([v, l]) => (
         <button key={v} className={tab === v ? 'active' : ''} onClick={() => setTab(v)}>{l}</button>
       ))}
     </div>
@@ -198,5 +266,6 @@ export default function Admin() {
     )}
 
     {tab === 'security' && <SecurityTab />}
+    {tab === 'usage' && <UsageTab />}
   </>;
 }

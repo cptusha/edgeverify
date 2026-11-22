@@ -8,6 +8,7 @@ import { runScreening } from './screening.js';
 import { emitAlert } from './alerts.js';
 import { audit } from '../middleware/audit.js';
 import { requireRole } from '../middleware/auth.js';
+import { increment } from '../services/usage.js';
 
 export const customersRouter = Router();
 const Body = z.object({
@@ -53,6 +54,7 @@ customersRouter.post('/', requireRole('tenant_admin', 'compliance_officer', 'ana
     const b = Body.parse(req.body); const { screen, ...data } = b;
     const row = { id: uuid(), tenant_id: req.actor.tenant_id, ...data, name_normalized: normalizeName(b.full_name), products: JSON.stringify(b.products || []), ubos: JSON.stringify(b.ubos || []) };
     await db('customers').insert(row);
+    increment(req.actor.tenant_id, 'customers').catch(() => {});
     const { risk, screening } = await onboardOrRescore(req.actor.tenant_id, { ...row, products: b.products || [], ubos: b.ubos || [] }, req.actor.id, { screen });
     req.skipAutoAudit = true;
     await audit(req, { action: 'customer.onboard', resource_type: 'customer', resource_id: row.id, after: { name: b.full_name, risk_level: risk.level, risk_score: risk.score, screening_outcome: screening?.outcome } });
