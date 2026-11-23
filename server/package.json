@@ -10,7 +10,8 @@
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",
     "test": "node --test test/*.test.js",
-    "lockdown-demo": "node src/db/lockdown-demo.js"
+    "lockdown-demo": "node src/db/lockdown-demo.js",
+    "gen-postman": "node scripts/gen-postman.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

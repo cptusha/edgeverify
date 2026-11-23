@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, fmt } from '../api.js';
-import { useFetch, Pill, Err, Empty, Decision } from '../components/ui.jsx';
+import { useFetch, Pill, Err, Empty, Decision, ExportBtn } from '../components/ui.jsx';
 
 export default function Transactions() {
   const [status, setStatus] = useState(''); const { data, error, reload } = useFetch('/transactions', { status, limit: 200 }, [status]); const [show, setShow] = useState(false);
   return <>
-    <div className="page-head"><div><h1>Transactions</h1><p>Every transaction your core banking system sends is decided in real time: accept, review (hold) or reject (block).</p></div><button className="primary" onClick={() => setShow(s => !s)}>{show ? 'Close' : 'Simulate a transaction'}</button></div>
+    <div className="page-head"><div><h1>Transactions</h1><p>Every transaction your core banking system sends is decided in real time: accept, review (hold) or reject (block).</p></div><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><ExportBtn path="/export/transactions" filename="transactions.csv" /><button className="primary" onClick={() => setShow(s => !s)}>{show ? 'Close' : 'Simulate a transaction'}</button></div></div>
     {show && <Simulator onDone={reload} />}
     <div className="card"><div className="toolbar"><div><label>Decision</label><select value={status} onChange={e => setStatus(e.target.value)}><option value="">All</option>{['cleared', 'flagged', 'held', 'blocked'].map(x => <option key={x}>{x}</option>)}</select></div></div><Err e={error} />
       {data?.length ? <table><thead><tr><th>When</th><th>Customer</th><th>Dir</th><th>Type</th><th>Amount</th><th>Counterparty</th><th>Country</th><th>Channel</th><th>Decision</th><th>Score</th><th>Rules</th><th>ms</th></tr></thead><tbody>{data.map(t => <tr key={t.id}><td className="small muted">{fmt.dt(t.occurred_at)}</td><td className="small">{t.customer_id ? <Link to={`/customers/${t.customer_id}`}>{t.customer_id.slice(0, 8)}</Link> : <span className="muted">unlinked</span>}</td><td>{t.direction}</td><td>{t.tx_type}</td><td className="mono">{fmt.money(t.amount, t.currency)}</td><td>{t.counterparty_name || '—'}</td><td className="mono">{t.counterparty_country || t.destination_country || '—'}</td><td className="small">{t.channel}</td><td><Pill v={t.status} /></td><td className="mono">{t.risk_score}</td><td className="small mono">{(t.rule_hits || []).map(h => h.rule_code).join(', ')}</td><td className="mono muted">{t.latency_ms}</td></tr>)}</tbody></table> : <Empty>No transactions.</Empty>}</div>

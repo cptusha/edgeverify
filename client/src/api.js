@@ -13,6 +13,19 @@ export async function api(path, { method = 'GET', body, params } = {}) {
   if (!r.ok) throw Object.assign(new Error(data.error || r.statusText), { status: r.status, issues: data.issues });
   return data;
 }
+// Download a CSV export — triggers browser file save
+export async function downloadCsv(path, filename, params) {
+  const s = session.get();
+  const qs = params ? '?' + new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ''))) : '';
+  const r = await fetch(`/v1${path}${qs}`, { headers: { ...(s?.token ? { authorization: `Bearer ${s.token}` } : {}) } });
+  if (!r.ok) throw new Error('Export failed');
+  const blob = await r.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 export const fmt = {
   n: (v) => Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 }),
   money: (v, c = '') => `${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${c}`.trim(),

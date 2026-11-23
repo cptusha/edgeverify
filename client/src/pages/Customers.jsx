@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, fmt } from '../api.js';
-import { useFetch, Pill, Err, Empty, MatchRibbon } from '../components/ui.jsx';
+import { useFetch, Pill, Err, Empty, MatchRibbon, ExportBtn } from '../components/ui.jsx';
 
 export default function Customers() {
   const [filters, setFilters] = useState({ q: '', risk_level: '', kyc_status: '' }); const [show, setShow] = useState(false);
   const { data, error, reload } = useFetch('/customers', filters, [filters.risk_level, filters.kyc_status]);
   const rows = (data || []).filter(c => !filters.q || c.full_name.toLowerCase().includes(filters.q.toLowerCase()));
   return <>
-    <div className="page-head"><div><h1>Customers</h1><p>Every customer is screened at onboarding, re-screened daily, and re-scored whenever their profile changes.</p></div><button className="primary" onClick={() => setShow(s => !s)}>{show ? 'Close' : 'Onboard a customer'}</button></div>
+    <div className="page-head"><div><h1>Customers</h1><p>Every customer is screened at onboarding, re-screened daily, and re-scored whenever their profile changes.</p></div><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><ExportBtn path="/export/customers" filename="customers.csv" /><button className="primary" onClick={() => setShow(s => !s)}>{show ? 'Close' : 'Onboard a customer'}</button></div></div>
     {show && <Onboard onDone={() => { setShow(false); reload(); }} />}
     <div className="card"><div className="toolbar"><div><label>Name</label><input value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} placeholder="Filter by name" /></div>
       <div><label>Risk</label><select value={filters.risk_level} onChange={e => setFilters({ ...filters, risk_level: e.target.value })}><option value="">Any</option>{['low', 'medium', 'high', 'prohibited'].map(x => <option key={x}>{x}</option>)}</select></div>

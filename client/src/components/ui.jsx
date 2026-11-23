@@ -1,5 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api, downloadCsv } from '../api.js';
+
+export function ExportBtn({ path, filename, params, label = 'Export CSV' }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const run = async () => {
+    setBusy(true); setErr(null);
+    try { await downloadCsv(path, filename, params); }
+    catch (e) { setErr('Export failed'); }
+    setBusy(false);
+  };
+  return (
+    <span>
+      <button onClick={run} disabled={busy} style={{ fontSize: 13 }}>
+        {busy ? 'Preparing…' : `↓ ${label}`}
+      </button>
+      {err && <span className="small" style={{ color: 'var(--danger)', marginLeft: 8 }}>{err}</span>}
+    </span>
+  );
+}
 
 export const Pill = ({ v, children }) => <span className={`pill ${v}`}>{children ?? String(v).replace(/_/g, ' ')}</span>;
 export const Kpi = ({ v, l, sub }) => <div className="card kpi"><span className="v">{v}</span><span className="l">{l}</span>{sub && <span className="sub">{sub}</span>}</div>;

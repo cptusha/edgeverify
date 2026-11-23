@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { api, fmt } from '../api.js';
-import { MatchRibbon, Pill, Err, Empty, useFetch } from '../components/ui.jsx';
+import { MatchRibbon, Pill, Err, Empty, useFetch, ExportBtn } from '../components/ui.jsx';
 
 export default function Screening() {
   const [tab, setTab] = useState('screen');
   return <>
-    <div className="page-head"><div><h1>Screen a name</h1><p>One query across every enabled sanctions, PEP, watch and wanted list. Results are recorded and auditable.</p></div></div>
+    <div className="page-head"><div><h1>Screen a name</h1><p>One query across every enabled sanctions, PEP, watch and wanted list. Results are recorded and auditable.</p></div><ExportBtn path="/export/screenings" filename="screenings.csv" /></div>
     <div className="tabs"><button className={tab === 'screen' ? 'active' : ''} onClick={() => setTab('screen')}>Screening</button><button className={tab === 'profiles' ? 'active' : ''} onClick={() => setTab('profiles')}>Profile search</button><button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>Recent screenings</button></div>
     {tab === 'screen' && <ScreenForm />}{tab === 'profiles' && <ProfileSearch />}{tab === 'history' && <History />}
   </>;

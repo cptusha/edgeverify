@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, fmt, session } from '../api.js';
-import { useFetch, Pill, Err, Empty, MatchRibbon } from '../components/ui.jsx';
+import { useFetch, Pill, Err, Empty, MatchRibbon, ExportBtn } from '../components/ui.jsx';
 
 export default function Alerts() {
   const [f, setF] = useState({ status: 'open,investigating,escalated', severity: '', alert_type: '' }); const [tab, setTab] = useState('alerts');
   const { data, error } = useFetch('/alerts', { ...f, limit: 300 }, [f.status, f.severity, f.alert_type]); const cases = useFetch('/cases');
   return <>
-    <div className="page-head"><div><h1>Alerts & cases</h1><p>Analysts investigate; only a compliance officer can confirm a true positive or file an STR. Every transition is written to the audit chain.</p></div></div>
+    <div className="page-head"><div><h1>Alerts & cases</h1><p>Analysts investigate; only a compliance officer can confirm a true positive or file an STR. Every transition is written to the audit chain.</p></div><ExportBtn path="/export/alerts" filename="alerts.csv" /></div>
     <div className="tabs"><button className={tab === 'alerts' ? 'active' : ''} onClick={() => setTab('alerts')}>Alert queue</button><button className={tab === 'cases' ? 'active' : ''} onClick={() => setTab('cases')}>Cases ({cases.data?.length || 0})</button></div>
     {tab === 'alerts' && <div className="card"><div className="toolbar"><div><label>Status</label><select value={f.status} onChange={e => setF({ ...f, status: e.target.value })}><option value="open,investigating,escalated">Open (all)</option>{['open', 'investigating', 'escalated', 'closed_false_positive', 'closed_true_positive', 'str_filed'].map(x => <option key={x} value={x}>{x.replace(/_/g, ' ')}</option>)}<option value="">Everything</option></select></div>
       <div><label>Severity</label><select value={f.severity} onChange={e => setF({ ...f, severity: e.target.value })}><option value="">Any</option>{['critical', 'high', 'medium', 'low'].map(x => <option key={x}>{x}</option>)}</select></div>
